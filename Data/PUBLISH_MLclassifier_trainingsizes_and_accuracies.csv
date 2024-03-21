@@ -1,0 +1,16 @@
+﻿Subspecies pair,Training set size after downsampling,Average classifier accuracy,Group
+hyemalis/aikeni,27,0.7235,Non-adjacent
+hyemalis/caniceps,132,0.69,Non-adjacent
+hyemalis/dorsalis,103,0.8565,Non-adjacent
+hyemalis/mearnsi,47,0.7435,Non-adjacent
+hyemalis/oreganus,507,0.6945,Hybridizing
+caniceps/aikeni,27,0.802,Adjacent non-hybridizing
+caniceps/dorsalis,103,0.892,Hybridizing
+caniceps/mearnsi,51,0.6075,Hybridizing
+caniceps/oreganus,132,0.7395,Hybridizing
+dorsalis/aikeni,27,0.857,Non-adjacent
+dorsalis/mearnsi,51,0.8405,Non-adjacent
+dorsalis/oreganus,103,0.878,Adjacent non-hybridizing
+mearnsi/aikeni,27,0.7825,Hybridizing
+mearnsi/oreganus,53,0.674,Hybridizing
+oreganus/aikeni,26,0.8375,Adjacent non-hybridizing

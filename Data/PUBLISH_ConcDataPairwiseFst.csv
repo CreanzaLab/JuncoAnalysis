@@ -1,0 +1,16 @@
+﻿Subspecies pair,Pairwise Fst,Group
+hyemalis/aikeni,0.087,Non-adjacent
+hyemalis/caniceps,0.18,Non-adjacent
+hyemalis/dorsalis,0.063,Non-adjacent
+hyemalis/mearnsi,0.33,Non-adjacent
+hyemalis/oreganus,0.38,Hybridizing
+caniceps/aikeni,0.29,Adjacent non-hybridizing
+caniceps/dorsalis,0.23,Hybridizing
+caniceps/mearnsi,0.13,Hybridizing
+caniceps/oreganus,0.16,Hybridizing
+dorsalis/aikeni,0.08,Non-adjacent
+dorsalis/mearnsi,0.38,Non-adjacent
+dorsalis/oreganus,0.39,Adjacent non-hybridizing
+mearnsi/aikeni,0.47,Hybridizing
+mearnsi/oreganus,0.069,Hybridizing
+oreganus/aikeni,0.4,Adjacent non-hybridizing

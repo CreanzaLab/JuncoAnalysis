@@ -1,0 +1,16 @@
+Subspecies pair	Category	Num hybrid sightings	Median geographic distance (km)	Average genetic distance	Pairwise Fst	Num sig song features	Balanced accuracy of song classifier
+oreganus x aikeni	2Adjacent non-hybridizing	0	1484.8673	0.0004793162	0.4	2	0.84
+caniceps x aikeni	2Adjacent non-hybridizing	0	469.5613	0.0005798118	0.29	1	0.80
+dorsalis x oreganus	2Adjacent non-hybridizing	0	1204.8852	0.0008007106	0.39	6	0.88
+mearnsi x oreganus	3Hybridizing	6	986.5947	0.0006862288	0.069	4	0.67
+mearnsi x aikeni	3Hybridizing	5	542.215	0.0008534754	0.47	0	0.78
+hyemalis x oreganus	3Hybridizing	95	3661.823	0.0008773326	0.38	0	0.70
+caniceps x mearnsi	3Hybridizing	61	601.849	0.0009764982	0.13	2	0.61
+caniceps x oreganus	3Hybridizing	7	1265.5223	0.000700254	0.16	2	0.74
+caniceps x dorsalis	3Hybridizing	5	771.6201	0.0008923393	0.23	6	0.89
+hyemalis x mearnsi	1Non-adjacent	0	2708.728	0.001255459	0.33	5	0.74
+hyemalis x aikeni	1Non-adjacent	0	2179.856	0.0004012776	0.087	3	0.72
+hyemalis x caniceps	1Non-adjacent	0	2456.716	0.0009667438	0.18	2	0.69
+hyemalis x dorsalis	1Non-adjacent	0	3039.454	0.0007092028	0.063	6	0.86
+dorsalis x aikeni	1Non-adjacent	0	1240.697	0.0003210112	0.08	1	0.86
+dorsalis x mearnsi	1Non-adjacent	0	1176.0698	0.001175052	0.38	5	0.84
