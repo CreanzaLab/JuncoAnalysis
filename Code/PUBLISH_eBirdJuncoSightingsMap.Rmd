@@ -1,0 +1,61 @@
+---
+title: "Junco eBird Sightings Map"
+author: "Sarah Hourihan"
+date: "2023-06-09"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+## Load packages
+library(ggplot2)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(readr)
+
+## Read in data
+# ebird_junco_sightings <- read.csv("/Users/sarahhourihan/Box/Creanza Lab/Sarah_Nicole/mapping ebird sightings/breedingszn_junco_ebird_sightings.csv") # full data set
+
+simplified_junco_sightings <- read.csv("/Users/sarahhourihan/Box/Creanza Lab/Sarah_Nicole/files_for_manuscript/PUBLISH_SimplifiedJuncoSightings.csv") # simplified data set, removed exact coordinate duplicates to make clearer map
+
+## Load the required shapefiles
+countries <- ne_countries(scale = "medium", returnclass = "sf")
+states_provinces <- ne_states(returnclass = "sf")
+
+## Filter the North American countries and states
+north_america <- countries[countries$continent == "North America", ]
+
+north_america_states <- states_provinces[states_provinces$admin == "United States of America" | states_provinces$admin == "Canada" | states_provinces$admin == "Mexico", ]
+
+## Define the order to plot subspecies
+plotting_order <- c("oreganus/mearnsi", "oreganus/caniceps", "caniceps/dorsalis", "mearnsi/aikeni", "mearnsi/caniceps", "hyemalis/oreganus", "aikeni", "dorsalis", "mearnsi", "caniceps", "oreganus", "hyemalis")
+
+## Define the size of plotted points
+plotting_size <- c("hyemalis" = 0.5, "oreganus" = 0.5, "caniceps" = 0.5, "mearnsi" = 0.5, "dorsalis" = 0.5, "aikeni" = 0.5, "mearnsi/aikeni" = 2.7, "mearnsi/caniceps" = 2.7, "caniceps/dorsalis" = 2.7, "oreganus/caniceps" = 2.7, "oreganus/mearnsi" = 2.7, "hyemalis/oreganus" = 2.7)
+
+## Define shape and color of points
+plotting_shape <- c("hyemalis" = 16, "oreganus" = 16, "aikeni" = 16, "caniceps" = 16, "dorsalis" = 16, "mearnsi" = 16, "mearnsi/aikeni" = 17, "mearnsi/caniceps" = 17, "caniceps/dorsalis" = 17, "oreganus/caniceps" = 17, "oreganus/mearnsi" = 17, "hyemalis/oreganus" = 17)
+
+plotting_colors <- c("hyemalis" = "palevioletred1", "oreganus" = "royalblue", "aikeni" = "green4", "caniceps" = "gold", "dorsalis" = "darkorchid4", "mearnsi" = "firebrick3", "caniceps/dorsalis" = "coral3", "mearnsi/aikeni" = "plum3", "mearnsi/caniceps" = "orange", "oreganus/caniceps" = "deepskyblue", "oreganus/mearnsi" = "deeppink2", "hyemalis/oreganus" = "green")
+
+## Define point transparency
+plotting_transparency <- c("hyemalis" = 0.6, "oreganus" = 0.6, "aikeni" = 0.6, "caniceps" = 0.6, "dorsalis" = 0.6, "mearnsi" = 0.6, "mearnsi/aikeni" = 1, "mearnsi/caniceps" = 1, "caniceps/dorsalis" = 1, "oreganus/caniceps" = 1, "oreganus/mearnsi" = 1, "hyemalis/oreganus" = 1)
+
+## Plot the map
+plot <- ggplot() +
+  geom_sf(data = north_america, fill = "white", color = "black") +
+  geom_point(data = simplified_junco_sightings, aes(x = Longitude, y = Latitude, colour = Subspecies, size = Subspecies, shape = Subspecies, alpha = Subspecies)) +
+  geom_sf(data = north_america_states, fill = NA, color = "azure3") +
+  coord_sf(xlim  = c(-167, -50), ylim = c(30, 70), expand = FALSE) +
+  theme_bw() +
+  scale_color_manual(values = plotting_colors, breaks = plotting_order, limits = plotting_order) +
+  scale_size_manual(values = plotting_size, breaks = plotting_order, limits = plotting_order) +
+  scale_shape_manual(values = plotting_shape, breaks = plotting_order, limits = plotting_order) +
+  scale_alpha_manual(values = plotting_transparency, breaks = plotting_order, limits = plotting_order)
+plot
+
+## Map edited in Adobe Illustrator for the paper figure
+```

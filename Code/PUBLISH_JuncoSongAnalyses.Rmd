@@ -1,0 +1,662 @@
+---
+title: "Junco Song Analyses FINAL"
+author: "Sarah Hourihan and Nicole Creanza"
+date: '2023-02-10'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Load data and make ID matching table
+df <- read.csv(file="/Users/sarahhourihan/Library/CloudStorage/Box-Box/Creanza Lab/Sarah_Nicole/files_for_manuscript/PUBLISH_SongFeatureData.csv", header=TRUE) # Load song feature output data from Chipper
+
+JuncoMetadata=read.csv(file="/Users/sarahhourihan/Library/CloudStorage/Box-Box/Creanza Lab/Sarah_Nicole/files_for_manuscript/PUBLISH_Supp Data 1 JuncoMetadata.csv", header=TRUE) # Load metadata
+
+df$subspecies="test"
+
+ID_matching_table=data.frame(1,2,3,4) # ID matching table to add subspecies to song feature output data, using common Recording ID between metadata and song feature output data
+colnames(ID_matching_table)=c("ID", "ID_match","ID_index","Subspecies")
+ID_matching_table$Subspecies="test"
+
+for (i in 1:nrow(df)){
+   ID_match=which(JuncoMetadata$Recording.ID==df$ID_Num[i])
+   which(JuncoMetadata$Recording.ID==df$ID_Num[i])
+   JuncoMetadata$Subspecies_Friis[ID_match]
+   ID_matching_table=rbind(ID_matching_table,c(df$ID_Num[i],JuncoMetadata$Recording.ID[ID_match],ID_match,as.character(JuncoMetadata[ID_match,3])))
+}
+ID_matching_table=ID_matching_table[2:2123,]
+```
+
+```{r}
+# Shapiro tests for normality of each song feature before log transformation
+shapiro.test(df$bout_duration) # Bout duration (ms) = non-parametric
+shapiro.test(df$num_syllables) # Number of syllables = non-parametric
+shapiro.test(df$num_syllable_per_bout_duration.1.ms.) # Number of syllables per bout duration (1/ms) = non-parametric
+shapiro.test(df$avg_syllable_duration.ms.) # Average syllable duration (ms) = non-parametric
+shapiro.test(df$avg_silence_duration.ms.) # Average silence duration (ms) = non-parametric
+shapiro.test(df$num_unique_syllables) # Number of unique syllables = non-parametric
+shapiro.test(df$mean_syllable_stereotypy) # Mean syllable stereotypy = non-parametric
+shapiro.test(df$avg_sylls_upper_freq.Hz.) # Average syllable upper frequency (Hz) = non-parametric
+shapiro.test(df$avg_sylls_lower_freq.Hz.) #22 - Average syllable lower frequency (Hz) = non-parametric
+shapiro.test(df$avg_sylls_freq_range.Hz.) #28 - Average syllable frequency range (Hz) = non-parametric
+
+# All values were returned as "non-parametric" (p < 2.2e-16) 
+``` 
+
+```{r}
+# Log transformation of each song feature's data
+df2 <- df # Save log-transformed song feature output data as df2
+
+df2$bout_duration.ms. <- log(df$bout_duration.ms.) # Log transform bout duration data
+df2$num_syllables <- log(df$num_syllables) # Log transform number of syllables data
+df2$num_syllable_per_bout_duration.1.ms. <- log(df$num_syllable_per_bout_duration.1.ms.) # Log transform number of syllables per bout duration data
+df2$avg_syllable_duration.ms. <- log(df$avg_syllable_duration.ms.) # Log transform average syllable duration data
+df2$avg_silence_duration.ms. <- log(df$avg_silence_duration.ms.) # Log transform average silence duration data
+df2$num_unique_syllables <- log(df$num_unique_syllables) # Log transform number of unique syllables data
+df2$mean_syllable_stereotypy <- log(df$mean_syllable_stereotypy)  # Log transform mean syllable stereotypy data
+df2$avg_sylls_upper_freq.Hz. <- log(df$avg_sylls_upper_freq.Hz.) # Log transform average syllable upper frequency data
+df2$avg_sylls_lower_freq.Hz. <- log(df$avg_sylls_lower_freq.Hz.) # Log transform average syllable lower frequency data
+df2$avg_sylls_freq_range.Hz. <- log(df$avg_sylls_freq_range.Hz.) # Log transform average syllable frequency range data
+```
+
+```{r}
+# Shapiro tests for normality of each song feature after log transformation
+shapiro.test(df2$bout_duration.ms.) # Log-transformed bout duration = non-parametric
+shapiro.test(df2$num_syllables) # Log-transformed number of syllables = non-parametric
+shapiro.test(df2$num_syllable_per_bout_duration.1.ms.) # Log-transformed number of syllables per bout duration = non-parametric
+shapiro.test(df2$avg_syllable_duration.ms.) # Log-transformed average syllable duration = non-parametric
+shapiro.test(df2$avg_silence_duration.ms.) # Log-transformed average silence duration = non-parametric
+shapiro.test(df2$num_unique_syllables) # Log-transformed number of unique syllables = non-parametric
+shapiro.test(df2$mean_syllable_stereotypy) # Log-transformed mean syllable stereotypy = non-parametric
+shapiro.test(df2$avg_sylls_upper_freq.Hz.) # Log-transformed average syllables upper frequency = non-parametric
+shapiro.test(df2$avg_sylls_lower_freq.Hz.) # Log-transformed average syllables lower frequency = non-parametric
+shapiro.test(df2$avg_sylls_freq_range.Hz.) # Log-transformed average syllables frequency range = non-parametric
+
+# All values were returned as "non-parametric" (p < 2.2e-16) 
+
+ID_matching_table=ID_matching_table
+df2$subspecies <- ID_matching_table$Subspecies # Use df2 "subspecies" column for ID matching table "Subspecies" column
+```
+
+```{r}
+# Pairwise Wilcoxon rank sum results for syllable duration
+SyllDurWilcoxResults=data.frame(hyemalis=1:6, oreganus=1:6, aikeni=1:6, caniceps=1:6, dorsalis=1:6, mearnsi=1:6, row.names = c("hyemalis", "oreganus", "aikeni", "caniceps", "dorsalis", "mearnsi")) # Make table to store results (before Bonferroni correction)
+
+SyllDurWilcoxResults$hyemalis[2]=wilcox.test(df2$avg_syllable_duration.ms.[which(df2$subspecies=="hyemalis")], df2$avg_syllable_duration.ms.[which(df2$subspecies=="oreganus")])[3]
+
+SyllDurWilcoxResults$hyemalis[3]=wilcox.test(df2$avg_syllable_duration.ms.[which(df2$subspecies=="hyemalis")], df2$avg_syllable_duration.ms.[which(df2$subspecies=="aikeni")])[3]
+
+SyllDurWilcoxResults$hyemalis[4]=wilcox.test(df2$avg_syllable_duration.ms.[which(df2$subspecies=="hyemalis")], df2$avg_syllable_duration.ms.[which(df2$subspecies=="caniceps")])[3]
+
+SyllDurWilcoxResults$hyemalis[5]=wilcox.test(df2$avg_syllable_duration.ms.[which(df2$subspecies=="hyemalis")], df2$avg_syllable_duration.ms.[which(df2$subspecies=="dorsalis")])[3]
+
+SyllDurWilcoxResults$hyemalis[6]=wilcox.test(df2$avg_syllable_duration.ms.[which(df2$subspecies=="hyemalis")], df2$avg_syllable_duration.ms.[which(df2$subspecies=="mearnsi")])[3]
+
+SyllDurWilcoxResults$oreganus[3]=wilcox.test(df2$avg_syllable_duration.ms.[which(df2$subspecies=="oreganus")], df2$avg_syllable_duration.ms.[which(df2$subspecies=="aikeni")])[3]
+
+SyllDurWilcoxResults$oreganus[4]=wilcox.test(df2$avg_syllable_duration.ms.[which(df2$subspecies=="oreganus")], df2$avg_syllable_duration.ms.[which(df2$subspecies=="caniceps")])[3]
+
+SyllDurWilcoxResults$oreganus[5]=wilcox.test(df2$avg_syllable_duration.ms.[which(df2$subspecies=="oreganus")], df2$avg_syllable_duration.ms.[which(df2$subspecies=="dorsalis")])[3]
+
+SyllDurWilcoxResults$oreganus[6]=wilcox.test(df2$avg_syllable_duration.ms.[which(df2$subspecies=="oreganus")], df2$avg_syllable_duration.ms.[which(df2$subspecies=="mearnsi")])[3]
+
+SyllDurWilcoxResults$aikeni[4]=wilcox.test(df2$avg_syllable_duration.ms.[which(df2$subspecies=="aikeni")], df2$avg_syllable_duration.ms.[which(df2$subspecies=="caniceps")])[3]
+
+SyllDurWilcoxResults$aikeni[5]=wilcox.test(df2$avg_syllable_duration.ms.[which(df2$subspecies=="aikeni")], df2$avg_syllable_duration.ms.[which(df2$subspecies=="dorsalis")])[3]
+
+SyllDurWilcoxResults$aikeni[6]=wilcox.test(df2$avg_syllable_duration.ms.[which(df2$subspecies=="aikeni")], df2$avg_syllable_duration.ms.[which(df2$subspecies=="mearnsi")])[3]
+
+SyllDurWilcoxResults$caniceps[5]=wilcox.test(df2$avg_syllable_duration.ms.[which(df2$subspecies=="caniceps")], df2$avg_syllable_duration.ms.[which(df2$subspecies=="dorsalis")])[3]
+
+SyllDurWilcoxResults$caniceps[6]=wilcox.test(df2$avg_syllable_duration.ms.[which(df2$subspecies=="caniceps")], df2$avg_syllable_duration.ms.[which(df2$subspecies=="mearnsi")])[3]
+
+SyllDurWilcoxResults$dorsalis[6]=wilcox.test(df2$avg_syllable_duration.ms.[which(df2$subspecies=="dorsalis")], df2$avg_syllable_duration.ms.[which(df2$subspecies=="mearnsi")])[3]
+
+SyllDurWilcoxResultsAdjusted <- matrix(data = as.numeric(unlist(SyllDurWilcoxResults)) * 15, nrow = 6, ncol = 6,
+                                dimnames = list(c("hyemalis","oreganus","aikeni","caniceps","dorsalis","mearnsi"),
+                                            c("hyemalis", "oreganus", "aikeni", "caniceps", "dorsalis", "mearnsi")))
+SyllDurWilcoxResultsAdjusted <- ifelse(SyllDurWilcoxResultsAdjusted > 1, 1, SyllDurWilcoxResultsAdjusted) # Matrix with Bonferroni-adjusted Wilcoxon results. Results are in lower left diagonal.
+```
+
+```{r}
+# Pairwise Wilcoxon rank sum results for bout duration
+BoutDurWilcoxResults=data.frame(hyemalis=1:6, oreganus=1:6, aikeni=1:6, caniceps=1:6, dorsalis=1:6, mearnsi=1:6, row.names = c("hyemalis", "oreganus", "aikeni", "caniceps", "dorsalis", "mearnsi")) # Make table to store results (before Bonferroni correction)
+
+BoutDurWilcoxResults$hyemalis[2]=wilcox.test(df2$bout_duration.ms.[which(df2$subspecies=="hyemalis")], df2$bout_duration.ms.[which(df2$subspecies=="oreganus")])[3]
+
+BoutDurWilcoxResults$hyemalis[3]=wilcox.test(df2$bout_duration.ms.[which(df2$subspecies=="hyemalis")], df2$bout_duration.ms.[which(df2$subspecies=="aikeni")])[3]
+
+BoutDurWilcoxResults$hyemalis[4]=wilcox.test(df2$bout_duration.ms.[which(df2$subspecies=="hyemalis")], df2$bout_duration.ms.[which(df2$subspecies=="caniceps")])[3]
+
+BoutDurWilcoxResults$hyemalis[5]=wilcox.test(df2$bout_duration.ms.[which(df2$subspecies=="hyemalis")], df2$bout_duration.ms.[which(df2$subspecies=="dorsalis")])[3]
+
+BoutDurWilcoxResults$hyemalis[6]=wilcox.test(df2$bout_duration.ms.[which(df2$subspecies=="hyemalis")], df2$bout_duration.ms.[which(df2$subspecies=="mearnsi")])[3]
+
+BoutDurWilcoxResults$oreganus[3]=wilcox.test(df2$bout_duration.ms.[which(df2$subspecies=="oreganus")], df2$bout_duration.ms.[which(df2$subspecies=="aikeni")])[3]
+
+BoutDurWilcoxResults$oreganus[4]=wilcox.test(df2$bout_duration.ms.[which(df2$subspecies=="oreganus")], df2$bout_duration.ms.[which(df2$subspecies=="caniceps")])[3]
+
+BoutDurWilcoxResults$oreganus[5]=wilcox.test(df2$bout_duration.ms.[which(df2$subspecies=="oreganus")], df2$bout_duration.ms.[which(df2$subspecies=="dorsalis")])[3]
+
+BoutDurWilcoxResults$oreganus[6]=wilcox.test(df2$bout_duration.ms.[which(df2$subspecies=="oreganus")], df2$bout_duration.ms.[which(df2$subspecies=="mearnsi")])[3]
+
+BoutDurWilcoxResults$aikeni[4]=wilcox.test(df2$bout_duration.ms.[which(df2$subspecies=="aikeni")], df2$bout_duration.ms.[which(df2$subspecies=="caniceps")])[3]
+
+BoutDurWilcoxResults$aikeni[5]=wilcox.test(df2$bout_duration.ms.[which(df2$subspecies=="aikeni")], df2$bout_duration.ms.[which(df2$subspecies=="dorsalis")])[3]
+
+BoutDurWilcoxResults$aikeni[6]=wilcox.test(df2$bout_duration.ms.[which(df2$subspecies=="aikeni")], df2$bout_duration.ms.[which(df2$subspecies=="mearnsi")])[3]
+
+BoutDurWilcoxResults$caniceps[5]=wilcox.test(df2$bout_duration.ms.[which(df2$subspecies=="caniceps")], df2$bout_duration.ms.[which(df2$subspecies=="dorsalis")])[3]
+
+BoutDurWilcoxResults$caniceps[6]=wilcox.test(df2$bout_duration.ms.[which(df2$subspecies=="caniceps")], df2$bout_duration.ms.[which(df2$subspecies=="mearnsi")])[3]
+
+BoutDurWilcoxResults$dorsalis[6]=wilcox.test(df2$bout_duration.ms.[which(df2$subspecies=="dorsalis")], df2$bout_duration.ms.[which(df2$subspecies=="mearnsi")])[3]
+
+BoutDurWilcoxResultsAdjusted <- matrix(data = as.numeric(unlist(BoutDurWilcoxResults)) * 15, nrow = 6, ncol = 6,
+                                dimnames = list(c("hyemalis","oreganus","aikeni","caniceps","dorsalis","mearnsi"),
+                                            c("hyemalis", "oreganus", "aikeni", "caniceps", "dorsalis", "mearnsi")))
+BoutDurWilcoxResultsAdjusted <- ifelse(BoutDurWilcoxResultsAdjusted > 1, 1, BoutDurWilcoxResultsAdjusted) # Matrix with Bonferroni-adjusted Wilcoxon results. Results are in lower left diagonal.
+```
+
+```{r}
+# Pairwise Wilcoxon rank sum results for number of syllables
+NumSyllsWilcoxResults=data.frame(hyemalis=1:6, oreganus=1:6, aikeni=1:6, caniceps=1:6, dorsalis=1:6, mearnsi=1:6, row.names = c("hyemalis", "oreganus", "aikeni", "caniceps", "dorsalis", "mearnsi")) # Make table to store results (before Bonferroni correction)
+
+NumSyllsWilcoxResults$hyemalis[2]=wilcox.test(df2$num_syllables[which(df2$subspecies=="hyemalis")], df2$num_syllables[which(df2$subspecies=="oreganus")])[3]
+
+NumSyllsWilcoxResults$hyemalis[3]=wilcox.test(df2$num_syllables[which(df2$subspecies=="hyemalis")], df2$num_syllables[which(df2$subspecies=="aikeni")])[3]
+
+NumSyllsWilcoxResults$hyemalis[4]=wilcox.test(df2$num_syllables[which(df2$subspecies=="hyemalis")], df2$num_syllables[which(df2$subspecies=="caniceps")])[3]
+
+NumSyllsWilcoxResults$hyemalis[5]=wilcox.test(df2$num_syllables[which(df2$subspecies=="hyemalis")], df2$num_syllables[which(df2$subspecies=="dorsalis")])[3]
+
+NumSyllsWilcoxResults$hyemalis[6]=wilcox.test(df2$num_syllables[which(df2$subspecies=="hyemalis")], df2$num_syllables[which(df2$subspecies=="mearnsi")])[3]
+
+NumSyllsWilcoxResults$oreganus[3]=wilcox.test(df2$num_syllables[which(df2$subspecies=="oreganus")], df2$num_syllables[which(df2$subspecies=="aikeni")])[3]
+
+NumSyllsWilcoxResults$oreganus[4]=wilcox.test(df2$num_syllables[which(df2$subspecies=="oreganus")], df2$num_syllables[which(df2$subspecies=="caniceps")])[3]
+
+NumSyllsWilcoxResults$oreganus[5]=wilcox.test(df2$num_syllables[which(df2$subspecies=="oreganus")], df2$num_syllables[which(df2$subspecies=="dorsalis")])[3]
+
+NumSyllsWilcoxResults$oreganus[6]=wilcox.test(df2$num_syllables[which(df2$subspecies=="oreganus")], df2$num_syllables[which(df2$subspecies=="mearnsi")])[3]
+
+NumSyllsWilcoxResults$aikeni[4]=wilcox.test(df2$num_syllables[which(df2$subspecies=="aikeni")], df2$num_syllables[which(df2$subspecies=="caniceps")])[3]
+
+NumSyllsWilcoxResults$aikeni[5]=wilcox.test(df2$num_syllables[which(df2$subspecies=="aikeni")], df2$num_syllables[which(df2$subspecies=="dorsalis")])[3]
+
+NumSyllsWilcoxResults$aikeni[6]=wilcox.test(df2$num_syllables[which(df2$subspecies=="aikeni")], df2$num_syllables[which(df2$subspecies=="mearnsi")])[3]
+
+NumSyllsWilcoxResults$caniceps[5]=wilcox.test(df2$num_syllables[which(df2$subspecies=="caniceps")], df2$num_syllables[which(df2$subspecies=="dorsalis")])[3]
+
+NumSyllsWilcoxResults$caniceps[6]=wilcox.test(df2$num_syllables[which(df2$subspecies=="caniceps")], df2$num_syllables[which(df2$subspecies=="mearnsi")])[3]
+
+NumSyllsWilcoxResults$dorsalis[6]=wilcox.test(df2$num_syllables[which(df2$subspecies=="dorsalis")], df2$num_syllables[which(df2$subspecies=="mearnsi")])[3]
+
+NumSyllsWilcoxResultsAdjusted <- matrix(data = as.numeric(unlist(NumSyllsWilcoxResults)) * 15, nrow = 6, ncol = 6,
+                                dimnames = list(c("hyemalis","oreganus","aikeni","caniceps","dorsalis","mearnsi"),
+                                            c("hyemalis", "oreganus", "aikeni", "caniceps", "dorsalis", "mearnsi")))
+NumSyllsWilcoxResultsAdjusted <- ifelse(NumSyllsWilcoxResultsAdjusted > 1, 1, NumSyllsWilcoxResultsAdjusted) # Matrix with Bonferroni-adjusted Wilcoxon results. Results are in lower left diagonal.
+```
+
+```{r}
+# Pairwise Wilcoxon rank sum results for number of syllables per bout duration
+NumSyllsPerBoutDurWilcoxResults=data.frame(hyemalis=1:6, oreganus=1:6, aikeni=1:6, caniceps=1:6, dorsalis=1:6, mearnsi=1:6, row.names = c("hyemalis", "oreganus", "aikeni", "caniceps", "dorsalis", "mearnsi")) # Make table to store results (before Bonferroni correction)
+
+NumSyllsPerBoutDurWilcoxResults$hyemalis[2]=wilcox.test(df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="hyemalis")], df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="oreganus")])[3]
+
+NumSyllsPerBoutDurWilcoxResults$hyemalis[3]=wilcox.test(df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="hyemalis")], df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="aikeni")])[3]
+
+NumSyllsPerBoutDurWilcoxResults$hyemalis[4]=wilcox.test(df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="hyemalis")], df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="caniceps")])[3]
+
+NumSyllsPerBoutDurWilcoxResults$hyemalis[5]=wilcox.test(df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="hyemalis")], df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="dorsalis")])[3]
+
+NumSyllsPerBoutDurWilcoxResults$hyemalis[6]=wilcox.test(df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="hyemalis")], df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="mearnsi")])[3]
+
+NumSyllsPerBoutDurWilcoxResults$oreganus[3]=wilcox.test(df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="oreganus")], df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="aikeni")])[3]
+
+NumSyllsPerBoutDurWilcoxResults$oreganus[4]=wilcox.test(df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="oreganus")], df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="caniceps")])[3]
+
+NumSyllsPerBoutDurWilcoxResults$oreganus[5]=wilcox.test(df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="oreganus")], df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="dorsalis")])[3]
+
+NumSyllsPerBoutDurWilcoxResults$oreganus[6]=wilcox.test(df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="oreganus")], df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="mearnsi")])[3]
+
+NumSyllsPerBoutDurWilcoxResults$aikeni[4]=wilcox.test(df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="aikeni")], df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="caniceps")])[3]
+
+NumSyllsPerBoutDurWilcoxResults$aikeni[5]=wilcox.test(df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="aikeni")], df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="dorsalis")])[3]
+
+NumSyllsPerBoutDurWilcoxResults$aikeni[6]=wilcox.test(df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="aikeni")], df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="mearnsi")])[3]
+
+NumSyllsPerBoutDurWilcoxResults$caniceps[5]=wilcox.test(df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="caniceps")], df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="dorsalis")])[3]
+
+NumSyllsPerBoutDurWilcoxResults$caniceps[6]=wilcox.test(df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="caniceps")], df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="mearnsi")])[3]
+
+NumSyllsPerBoutDurWilcoxResults$dorsalis[6]=wilcox.test(df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="dorsalis")], df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="mearnsi")])[3]
+
+NumSyllsPerBoutDurWilcoxResultsAdjusted <- matrix(data = as.numeric(unlist(NumSyllsPerBoutDurWilcoxResults)) * 15, nrow = 6, ncol = 6,
+                                dimnames = list(c("hyemalis","oreganus","aikeni","caniceps","dorsalis","mearnsi"),
+                                            c("hyemalis", "oreganus", "aikeni", "caniceps", "dorsalis", "mearnsi")))
+NumSyllsPerBoutDurWilcoxResultsAdjusted <- ifelse(NumSyllsPerBoutDurWilcoxResultsAdjusted > 1, 1, NumSyllsPerBoutDurWilcoxResultsAdjusted) # Matrix with Bonferroni-adjusted Wilcoxon results. Results are in lower left diagonal.
+```
+
+```{r}
+# Pairwise Wilcoxon rank sum results for average silence duration
+SilenceDurWilcoxResults=data.frame(hyemalis=1:6, oreganus=1:6, aikeni=1:6, caniceps=1:6, dorsalis=1:6, mearnsi=1:6, row.names = c("hyemalis", "oreganus", "aikeni", "caniceps", "dorsalis", "mearnsi")) # Make table to store results (before Bonferroni correction)
+
+SilenceDurWilcoxResults$hyemalis[2]=wilcox.test(df2$avg_silence_duration.ms.[which(df2$subspecies=="hyemalis")], df2$avg_silence_duration.ms.[which(df2$subspecies=="oreganus")])[3]
+
+SilenceDurWilcoxResults$hyemalis[3]=wilcox.test(df2$avg_silence_duration.ms.[which(df2$subspecies=="hyemalis")], df2$avg_silence_duration.ms.[which(df2$subspecies=="aikeni")])[3]
+
+SilenceDurWilcoxResults$hyemalis[4]=wilcox.test(df2$avg_silence_duration.ms.[which(df2$subspecies=="hyemalis")], df2$avg_silence_duration.ms.[which(df2$subspecies=="caniceps")])[3]
+
+SilenceDurWilcoxResults$hyemalis[5]=wilcox.test(df2$avg_silence_duration.ms.[which(df2$subspecies=="hyemalis")], df2$avg_silence_duration.ms.[which(df2$subspecies=="dorsalis")])[3]
+
+SilenceDurWilcoxResults$hyemalis[6]=wilcox.test(df2$avg_silence_duration.ms.[which(df2$subspecies=="hyemalis")], df2$avg_silence_duration.ms.[which(df2$subspecies=="mearnsi")])[3]
+
+SilenceDurWilcoxResults$oreganus[3]=wilcox.test(df2$avg_silence_duration.ms.[which(df2$subspecies=="oreganus")], df2$avg_silence_duration.ms.[which(df2$subspecies=="aikeni")])[3]
+
+SilenceDurWilcoxResults$oreganus[4]=wilcox.test(df2$avg_silence_duration.ms.[which(df2$subspecies=="oreganus")], df2$avg_silence_duration.ms.[which(df2$subspecies=="caniceps")])[3]
+
+SilenceDurWilcoxResults$oreganus[5]=wilcox.test(df2$avg_silence_duration.ms.[which(df2$subspecies=="oreganus")], df2$avg_silence_duration.ms.[which(df2$subspecies=="dorsalis")])[3]
+
+SilenceDurWilcoxResults$oreganus[6]=wilcox.test(df2$avg_silence_duration.ms.[which(df2$subspecies=="oreganus")], df2$avg_silence_duration.ms.[which(df2$subspecies=="mearnsi")])[3]
+
+SilenceDurWilcoxResults$aikeni[4]=wilcox.test(df2$avg_silence_duration.ms.[which(df2$subspecies=="aikeni")], df2$avg_silence_duration.ms.[which(df2$subspecies=="caniceps")])[3]
+
+SilenceDurWilcoxResults$aikeni[5]=wilcox.test(df2$avg_silence_duration.ms.[which(df2$subspecies=="aikeni")], df2$avg_silence_duration.ms.[which(df2$subspecies=="dorsalis")])[3]
+
+SilenceDurWilcoxResults$aikeni[6]=wilcox.test(df2$avg_silence_duration.ms.[which(df2$subspecies=="aikeni")], df2$avg_silence_duration.ms.[which(df2$subspecies=="mearnsi")])[3]
+
+SilenceDurWilcoxResults$caniceps[5]=wilcox.test(df2$avg_silence_duration.ms.[which(df2$subspecies=="caniceps")], df2$avg_silence_duration.ms.[which(df2$subspecies=="dorsalis")])[3]
+
+SilenceDurWilcoxResults$caniceps[6]=wilcox.test(df2$avg_silence_duration.ms.[which(df2$subspecies=="caniceps")], df2$avg_silence_duration.ms.[which(df2$subspecies=="mearnsi")])[3]
+
+SilenceDurWilcoxResults$dorsalis[6]=wilcox.test(df2$avg_silence_duration.ms.[which(df2$subspecies=="dorsalis")], df2$avg_silence_duration.ms.[which(df2$subspecies=="mearnsi")])[3]
+
+SilenceDurWilcoxResultsAdjusted <- matrix(data = as.numeric(unlist(SilenceDurWilcoxResults)) * 15, nrow = 6, ncol = 6,
+                                dimnames = list(c("hyemalis","oreganus","aikeni","caniceps","dorsalis","mearnsi"),
+                                            c("hyemalis", "oreganus", "aikeni", "caniceps", "dorsalis", "mearnsi")))
+SilenceDurWilcoxResultsAdjusted <- ifelse(SilenceDurWilcoxResultsAdjusted > 1, 1, SilenceDurWilcoxResultsAdjusted) # Matrix with Bonferroni-adjusted Wilcoxon results. Results are in lower left diagonal.
+```
+
+```{r}
+# Pairwise Wilcoxon rank sum results for number of unique syllables
+UniqSyllsWilcoxResults=data.frame(hyemalis=1:6, oreganus=1:6, aikeni=1:6, caniceps=1:6, dorsalis=1:6, mearnsi=1:6, row.names = c("hyemalis", "oreganus", "aikeni", "caniceps", "dorsalis", "mearnsi")) # Make table to store results (before Bonferroni correction)
+
+UniqSyllsWilcoxResults$hyemalis[2]=wilcox.test(df2$num_unique_syllables[which(df2$subspecies=="hyemalis")], df2$num_unique_syllables[which(df2$subspecies=="oreganus")])[3]
+
+UniqSyllsWilcoxResults$hyemalis[3]=wilcox.test(df2$num_unique_syllables[which(df2$subspecies=="hyemalis")], df2$num_unique_syllables[which(df2$subspecies=="aikeni")])[3]
+
+UniqSyllsWilcoxResults$hyemalis[4]=wilcox.test(df2$num_unique_syllables[which(df2$subspecies=="hyemalis")], df2$num_unique_syllables[which(df2$subspecies=="caniceps")])[3]
+
+UniqSyllsWilcoxResults$hyemalis[5]=wilcox.test(df2$num_unique_syllables[which(df2$subspecies=="hyemalis")], df2$num_unique_syllables[which(df2$subspecies=="dorsalis")])[3]
+
+UniqSyllsWilcoxResults$hyemalis[6]=wilcox.test(df2$num_unique_syllables[which(df2$subspecies=="hyemalis")], df2$num_unique_syllables[which(df2$subspecies=="mearnsi")])[3]
+
+UniqSyllsWilcoxResults$oreganus[3]=wilcox.test(df2$num_unique_syllables[which(df2$subspecies=="oreganus")], df2$num_unique_syllables[which(df2$subspecies=="aikeni")])[3]
+
+UniqSyllsWilcoxResults$oreganus[4]=wilcox.test(df2$num_unique_syllables[which(df2$subspecies=="oreganus")], df2$num_unique_syllables[which(df2$subspecies=="caniceps")])[3]
+
+UniqSyllsWilcoxResults$oreganus[5]=wilcox.test(df2$num_unique_syllables[which(df2$subspecies=="oreganus")], df2$num_unique_syllables[which(df2$subspecies=="dorsalis")])[3]
+
+UniqSyllsWilcoxResults$oreganus[6]=wilcox.test(df2$num_unique_syllables[which(df2$subspecies=="oreganus")], df2$num_unique_syllables[which(df2$subspecies=="mearnsi")])[3]
+
+UniqSyllsWilcoxResults$aikeni[4]=wilcox.test(df2$num_unique_syllables[which(df2$subspecies=="aikeni")], df2$num_unique_syllables[which(df2$subspecies=="caniceps")])[3]
+
+UniqSyllsWilcoxResults$aikeni[5]=wilcox.test(df2$num_unique_syllables[which(df2$subspecies=="aikeni")], df2$num_unique_syllables[which(df2$subspecies=="dorsalis")])[3]
+
+UniqSyllsWilcoxResults$aikeni[6]=wilcox.test(df2$num_unique_syllables[which(df2$subspecies=="aikeni")], df2$num_unique_syllables[which(df2$subspecies=="mearnsi")])[3]
+
+UniqSyllsWilcoxResults$caniceps[5]=wilcox.test(df2$num_unique_syllables[which(df2$subspecies=="caniceps")], df2$num_unique_syllables[which(df2$subspecies=="dorsalis")])[3]
+
+UniqSyllsWilcoxResults$caniceps[6]=wilcox.test(df2$num_unique_syllables[which(df2$subspecies=="caniceps")], df2$num_unique_syllables[which(df2$subspecies=="mearnsi")])[3]
+
+UniqSyllsWilcoxResults$dorsalis[6]=wilcox.test(df2$num_unique_syllables[which(df2$subspecies=="dorsalis")], df2$num_unique_syllables[which(df2$subspecies=="mearnsi")])[3]
+
+UniqSyllsWilcoxResultsAdjusted <- matrix(data = as.numeric(unlist(UniqSyllsWilcoxResults)) * 15, nrow = 6, ncol = 6,
+                                dimnames = list(c("hyemalis","oreganus","aikeni","caniceps","dorsalis","mearnsi"),
+                                            c("hyemalis", "oreganus", "aikeni", "caniceps", "dorsalis", "mearnsi")))
+UniqSyllsWilcoxResultsAdjusted <- ifelse(UniqSyllsWilcoxResultsAdjusted > 1, 1, UniqSyllsWilcoxResultsAdjusted) # Matrix with Bonferroni-adjusted Wilcoxon results. Results are in lower left diagonal.
+```
+
+```{r}
+# Pairwise Wilcoxon rank sum results for mean syllable stereotypy
+SyllStereoWilcoxResults=data.frame(hyemalis=1:6, oreganus=1:6, aikeni=1:6, caniceps=1:6, dorsalis=1:6, mearnsi=1:6, row.names = c("hyemalis", "oreganus", "aikeni", "caniceps", "dorsalis", "mearnsi")) # Make table to store results (before Bonferroni correction)
+
+SyllStereoWilcoxResults$hyemalis[2]=wilcox.test(df2$mean_syllable_stereotypy[which(df2$subspecies=="hyemalis")], df2$mean_syllable_stereotypy[which(df2$subspecies=="oreganus")])[3]
+
+SyllStereoWilcoxResults$hyemalis[3]=wilcox.test(df2$mean_syllable_stereotypy[which(df2$subspecies=="hyemalis")], df2$mean_syllable_stereotypy[which(df2$subspecies=="aikeni")])[3]
+
+SyllStereoWilcoxResults$hyemalis[4]=wilcox.test(df2$mean_syllable_stereotypy[which(df2$subspecies=="hyemalis")], df2$mean_syllable_stereotypy[which(df2$subspecies=="caniceps")])[3]
+
+SyllStereoWilcoxResults$hyemalis[5]=wilcox.test(df2$mean_syllable_stereotypy[which(df2$subspecies=="hyemalis")], df2$mean_syllable_stereotypy[which(df2$subspecies=="dorsalis")])[3]
+
+SyllStereoWilcoxResults$hyemalis[6]=wilcox.test(df2$mean_syllable_stereotypy[which(df2$subspecies=="hyemalis")], df2$mean_syllable_stereotypy[which(df2$subspecies=="mearnsi")])[3]
+
+SyllStereoWilcoxResults$oreganus[3]=wilcox.test(df2$mean_syllable_stereotypy[which(df2$subspecies=="oreganus")], df2$mean_syllable_stereotypy[which(df2$subspecies=="aikeni")])[3]
+
+SyllStereoWilcoxResults$oreganus[4]=wilcox.test(df2$mean_syllable_stereotypy[which(df2$subspecies=="oreganus")], df2$mean_syllable_stereotypy[which(df2$subspecies=="caniceps")])[3]
+
+SyllStereoWilcoxResults$oreganus[5]=wilcox.test(df2$mean_syllable_stereotypy[which(df2$subspecies=="oreganus")], df2$mean_syllable_stereotypy[which(df2$subspecies=="dorsalis")])[3]
+
+SyllStereoWilcoxResults$oreganus[6]=wilcox.test(df2$mean_syllable_stereotypy[which(df2$subspecies=="oreganus")], df2$mean_syllable_stereotypy[which(df2$subspecies=="mearnsi")])[3]
+
+SyllStereoWilcoxResults$aikeni[4]=wilcox.test(df2$mean_syllable_stereotypy[which(df2$subspecies=="aikeni")], df2$mean_syllable_stereotypy[which(df2$subspecies=="caniceps")])[3]
+
+SyllStereoWilcoxResults$aikeni[5]=wilcox.test(df2$mean_syllable_stereotypy[which(df2$subspecies=="aikeni")], df2$mean_syllable_stereotypy[which(df2$subspecies=="dorsalis")])[3]
+
+SyllStereoWilcoxResults$aikeni[6]=wilcox.test(df2$mean_syllable_stereotypy[which(df2$subspecies=="aikeni")], df2$mean_syllable_stereotypy[which(df2$subspecies=="mearnsi")])[3]
+
+SyllStereoWilcoxResults$caniceps[5]=wilcox.test(df2$mean_syllable_stereotypy[which(df2$subspecies=="caniceps")], df2$mean_syllable_stereotypy[which(df2$subspecies=="dorsalis")])[3]
+
+SyllStereoWilcoxResults$caniceps[6]=wilcox.test(df2$mean_syllable_stereotypy[which(df2$subspecies=="caniceps")], df2$mean_syllable_stereotypy[which(df2$subspecies=="mearnsi")])[3]
+
+SyllStereoWilcoxResults$dorsalis[6]=wilcox.test(df2$mean_syllable_stereotypy[which(df2$subspecies=="dorsalis")], df2$mean_syllable_stereotypy[which(df2$subspecies=="mearnsi")])[3]
+
+SyllStereoWilcoxResultsAdjusted <- matrix(data = as.numeric(unlist(SyllStereoWilcoxResults)) * 15, nrow = 6, ncol = 6,
+                                dimnames = list(c("hyemalis","oreganus","aikeni","caniceps","dorsalis","mearnsi"),
+                                            c("hyemalis", "oreganus", "aikeni", "caniceps", "dorsalis", "mearnsi")))
+SyllStereoWilcoxResultsAdjusted <- ifelse(SyllStereoWilcoxResultsAdjusted > 1, 1, SyllStereoWilcoxResultsAdjusted) # Matrix with Bonferroni-adjusted Wilcoxon results. Results are in lower left diagonal.
+```
+
+```{r}
+# Pairwise Wilcoxon rank sum results for average syllable upper frequency
+SyllUpperFreqWilcoxResults=data.frame(hyemalis=1:6, oreganus=1:6, aikeni=1:6, caniceps=1:6, dorsalis=1:6, mearnsi=1:6, row.names = c("hyemalis", "oreganus", "aikeni", "caniceps", "dorsalis", "mearnsi")) # Make table to store results (before Bonferroni correction)
+
+SyllUpperFreqWilcoxResults$hyemalis[2]=wilcox.test(df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="hyemalis")], df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="oreganus")])[3]
+
+SyllUpperFreqWilcoxResults$hyemalis[3]=wilcox.test(df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="hyemalis")], df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="aikeni")])[3]
+
+SyllUpperFreqWilcoxResults$hyemalis[4]=wilcox.test(df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="hyemalis")], df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="caniceps")])[3]
+
+SyllUpperFreqWilcoxResults$hyemalis[5]=wilcox.test(df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="hyemalis")], df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="dorsalis")])[3]
+
+SyllUpperFreqWilcoxResults$hyemalis[6]=wilcox.test(df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="hyemalis")], df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="mearnsi")])[3]
+
+SyllUpperFreqWilcoxResults$oreganus[3]=wilcox.test(df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="oreganus")], df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="aikeni")])[3]
+
+SyllUpperFreqWilcoxResults$oreganus[4]=wilcox.test(df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="oreganus")], df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="caniceps")])[3]
+
+SyllUpperFreqWilcoxResults$oreganus[5]=wilcox.test(df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="oreganus")], df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="dorsalis")])[3]
+
+SyllUpperFreqWilcoxResults$oreganus[6]=wilcox.test(df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="oreganus")], df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="mearnsi")])[3]
+
+SyllUpperFreqWilcoxResults$aikeni[4]=wilcox.test(df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="aikeni")], df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="caniceps")])[3]
+
+SyllUpperFreqWilcoxResults$aikeni[5]=wilcox.test(df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="aikeni")], df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="dorsalis")])[3]
+
+SyllUpperFreqWilcoxResults$aikeni[6]=wilcox.test(df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="aikeni")], df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="mearnsi")])[3]
+
+SyllUpperFreqWilcoxResults$caniceps[5]=wilcox.test(df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="caniceps")], df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="dorsalis")])[3]
+
+SyllUpperFreqWilcoxResults$caniceps[6]=wilcox.test(df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="caniceps")], df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="mearnsi")])[3]
+
+SyllUpperFreqWilcoxResults$dorsalis[6]=wilcox.test(df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="dorsalis")], df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="mearnsi")])[3]
+
+SyllUpperFreqWilcoxResultsAdjusted <- matrix(data = as.numeric(unlist(SyllUpperFreqWilcoxResults)) * 15, nrow = 6, ncol = 6,
+                                dimnames = list(c("hyemalis","oreganus","aikeni","caniceps","dorsalis","mearnsi"),
+                                            c("hyemalis", "oreganus", "aikeni", "caniceps", "dorsalis", "mearnsi")))
+SyllUpperFreqWilcoxResultsAdjusted <- ifelse(SyllUpperFreqWilcoxResultsAdjusted > 1, 1, SyllUpperFreqWilcoxResultsAdjusted) # Matrix with Bonferroni-adjusted Wilcoxon results. Results are in lower left diagonal.
+```
+
+```{r}
+# Pairwise Wilcoxon rank sum results for average syllable lower frequency
+SyllLowerFreqWilcoxResults=data.frame(hyemalis=1:6, oreganus=1:6, aikeni=1:6, caniceps=1:6, dorsalis=1:6, mearnsi=1:6, row.names = c("hyemalis", "oreganus", "aikeni", "caniceps", "dorsalis", "mearnsi")) # Make table to store results (before Bonferroni correction)
+
+SyllLowerFreqWilcoxResults$hyemalis[2]=wilcox.test(df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="hyemalis")], df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="oreganus")])[3]
+
+SyllLowerFreqWilcoxResults$hyemalis[3]=wilcox.test(df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="hyemalis")], df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="aikeni")])[3]
+
+SyllLowerFreqWilcoxResults$hyemalis[4]=wilcox.test(df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="hyemalis")], df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="caniceps")])[3]
+
+SyllLowerFreqWilcoxResults$hyemalis[5]=wilcox.test(df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="hyemalis")], df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="dorsalis")])[3]
+
+SyllLowerFreqWilcoxResults$hyemalis[6]=wilcox.test(df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="hyemalis")], df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="mearnsi")])[3]
+
+SyllLowerFreqWilcoxResults$oreganus[3]=wilcox.test(df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="oreganus")], df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="aikeni")])[3]
+
+SyllLowerFreqWilcoxResults$oreganus[4]=wilcox.test(df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="oreganus")], df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="caniceps")])[3]
+
+SyllLowerFreqWilcoxResults$oreganus[5]=wilcox.test(df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="oreganus")], df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="dorsalis")])[3]
+
+SyllLowerFreqWilcoxResults$oreganus[6]=wilcox.test(df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="oreganus")], df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="mearnsi")])[3]
+
+SyllLowerFreqWilcoxResults$aikeni[4]=wilcox.test(df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="aikeni")], df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="caniceps")])[3]
+
+SyllLowerFreqWilcoxResults$aikeni[5]=wilcox.test(df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="aikeni")], df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="dorsalis")])[3]
+
+SyllLowerFreqWilcoxResults$aikeni[6]=wilcox.test(df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="aikeni")], df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="mearnsi")])[3]
+
+SyllLowerFreqWilcoxResults$caniceps[5]=wilcox.test(df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="caniceps")], df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="dorsalis")])[3]
+
+SyllLowerFreqWilcoxResults$caniceps[6]=wilcox.test(df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="caniceps")], df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="mearnsi")])[3]
+
+SyllLowerFreqWilcoxResults$dorsalis[6]=wilcox.test(df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="dorsalis")], df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="mearnsi")])[3]
+
+SyllLowerFreqWilcoxResultsAdjusted <- matrix(data = as.numeric(unlist(SyllLowerFreqWilcoxResults)) * 15, nrow = 6, ncol = 6,
+                                dimnames = list(c("hyemalis","oreganus","aikeni","caniceps","dorsalis","mearnsi"),
+                                            c("hyemalis", "oreganus", "aikeni", "caniceps", "dorsalis", "mearnsi")))
+SyllLowerFreqWilcoxResultsAdjusted <- ifelse(SyllLowerFreqWilcoxResultsAdjusted > 1, 1, SyllLowerFreqWilcoxResultsAdjusted) # Matrix with Bonferroni-adjusted Wilcoxon results. Results are in lower left diagonal.
+```
+
+```{r}
+# Pairwise Wilcoxon rank sum results for average syllable frequency range
+SyllFreqRangeWilcoxResults=data.frame(hyemalis=1:6, oreganus=1:6, aikeni=1:6, caniceps=1:6, dorsalis=1:6, mearnsi=1:6, row.names = c("hyemalis", "oreganus", "aikeni", "caniceps", "dorsalis", "mearnsi")) # Make table to store results (before Bonferroni correction)
+
+SyllFreqRangeWilcoxResults$hyemalis[2]=wilcox.test(df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="hyemalis")], df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="oreganus")])[3]
+
+SyllFreqRangeWilcoxResults$hyemalis[3]=wilcox.test(df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="hyemalis")], df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="aikeni")])[3]
+
+SyllFreqRangeWilcoxResults$hyemalis[4]=wilcox.test(df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="hyemalis")], df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="caniceps")])[3]
+
+SyllFreqRangeWilcoxResults$hyemalis[5]=wilcox.test(df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="hyemalis")], df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="dorsalis")])[3]
+
+SyllFreqRangeWilcoxResults$hyemalis[6]=wilcox.test(df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="hyemalis")], df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="mearnsi")])[3]
+
+SyllFreqRangeWilcoxResults$oreganus[3]=wilcox.test(df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="oreganus")], df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="aikeni")])[3]
+
+SyllFreqRangeWilcoxResults$oreganus[4]=wilcox.test(df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="oreganus")], df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="caniceps")])[3]
+
+SyllFreqRangeWilcoxResults$oreganus[5]=wilcox.test(df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="oreganus")], df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="dorsalis")])[3]
+
+SyllFreqRangeWilcoxResults$oreganus[6]=wilcox.test(df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="oreganus")], df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="mearnsi")])[3]
+
+SyllFreqRangeWilcoxResults$aikeni[4]=wilcox.test(df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="aikeni")], df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="caniceps")])[3]
+
+SyllFreqRangeWilcoxResults$aikeni[5]=wilcox.test(df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="aikeni")], df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="dorsalis")])[3]
+
+SyllFreqRangeWilcoxResults$aikeni[6]=wilcox.test(df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="aikeni")], df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="mearnsi")])[3]
+
+SyllFreqRangeWilcoxResults$caniceps[5]=wilcox.test(df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="caniceps")], df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="dorsalis")])[3]
+
+SyllFreqRangeWilcoxResults$caniceps[6]=wilcox.test(df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="caniceps")], df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="mearnsi")])[3]
+
+SyllFreqRangeWilcoxResults$dorsalis[6]=wilcox.test(df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="dorsalis")], df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="mearnsi")])[3]
+
+SyllFreqRangeWilcoxResultsAdjusted <- matrix(data = as.numeric(unlist(SyllFreqRangeWilcoxResults)) * 15, nrow = 6, ncol = 6,
+                                dimnames = list(c("hyemalis","oreganus","aikeni","caniceps","dorsalis","mearnsi"),
+                                            c("hyemalis", "oreganus", "aikeni", "caniceps", "dorsalis", "mearnsi")))
+SyllFreqRangeWilcoxResultsAdjusted <- ifelse(SyllFreqRangeWilcoxResultsAdjusted > 1, 1, SyllFreqRangeWilcoxResultsAdjusted) # Matrix with Bonferroni-adjusted Wilcoxon results. Results are in lower left diagonal.
+```
+
+```{r}
+# Boxplots visualizing distribution of song feature data
+
+# Average syllable duration boxplot
+oreganus <- df2$avg_syllable_duration.ms.[which(df2$subspecies=="oreganus")]
+mearnsi <- df2$avg_syllable_duration.ms.[which(df2$subspecies=="mearnsi")]
+hyemalis <- df2$avg_syllable_duration.ms.[which(df2$subspecies=="hyemalis")]
+dorsalis <- df2$avg_syllable_duration.ms.[which(df2$subspecies=="dorsalis")]
+caniceps <- df2$avg_syllable_duration.ms.[which(df2$subspecies=="caniceps")]
+aikeni <- df2$avg_syllable_duration.ms.[which(df2$subspecies=="aikeni")]
+
+boxplot(list(aikeni, caniceps, dorsalis, hyemalis, mearnsi, oreganus), 
+ylab ="log(Millisecond)", 
+xlab ="Subspecies",
+ylim = c(2, 6.4),
+main = "Average Syllable Duration",
+names = c("aikeni", "caniceps", "dorsalis", "hyemalis", "mearnsi", "oreganus"),
+col = c("green4","gold","darkorchid4","palevioletred1","firebrick3","royalblue"),
+border = "black", boxwex = .7, plot=TRUE
+)
+
+# Bout duration boxplot
+oreganus <- df2$bout_duration.ms.[which(df2$subspecies=="oreganus")]
+mearnsi <- df2$bout_duration.ms.[which(df2$subspecies=="mearnsi")]
+hyemalis <- df2$bout_duration.ms.[which(df2$subspecies=="hyemalis")]
+dorsalis <- df2$bout_duration.ms.[which(df2$subspecies=="dorsalis")]
+caniceps <- df2$bout_duration.ms.[which(df2$subspecies=="caniceps")]
+aikeni <- df2$bout_duration.ms.[which(df2$subspecies=="aikeni")]
+
+boxplot(list(aikeni, caniceps, dorsalis, hyemalis, mearnsi, oreganus),
+ylab ="log(Millisecond)", 
+xlab ="Subspecies",
+ylim = c(5.7, 8.3),
+main = "Bout Duration",
+names = c("aikeni", "caniceps", "dorsalis", "hyemalis", "mearnsi", "oreganus"),
+col = c("green4","gold","darkorchid4","palevioletred1","firebrick3","royalblue"),
+border = "black", boxwex = .7, plot=TRUE
+)
+
+# Number of syllables boxplot
+oreganus <- df2$num_syllables[which(df2$subspecies=="oreganus")]
+mearnsi <- df2$num_syllables[which(df2$subspecies=="mearnsi")]
+hyemalis <- df2$num_syllables[which(df2$subspecies=="hyemalis")]
+dorsalis <- df2$num_syllables[which(df2$subspecies=="dorsalis")]
+caniceps <- df2$num_syllables[which(df2$subspecies=="caniceps")]
+aikeni <- df2$num_syllables[which(df2$subspecies=="aikeni")]
+
+boxplot(list(aikeni, caniceps, dorsalis, hyemalis, mearnsi, oreganus),
+ylab ="log(Number of syllables)", 
+xlab ="Subspecies",
+ylim = c(0.5, 4.5),
+main = "Number of Syllables",
+names = c("aikeni", "caniceps", "dorsalis", "hyemalis", "mearnsi", "oreganus"),
+col = c("green4","gold","darkorchid4","palevioletred1","firebrick3","royalblue"),
+border = "black", boxwex = .7, plot=TRUE
+)
+
+# Number of syllables per bout duration boxplot
+oreganus <- df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="oreganus")]
+mearnsi <- df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="mearnsi")]
+hyemalis <- df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="hyemalis")]
+dorsalis <- df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="dorsalis")]
+caniceps <- df2$num_syllable_per_bout_duration.1.ms.[which(df2$subspecies=="caniceps")]
+aikeni <- df2$mean_syllable_stereotypy[which(df2$subspecies=="aikeni")]
+
+boxplot(list(aikeni, caniceps, dorsalis, hyemalis, mearnsi, oreganus),
+ylab ="log(1/Millisecond)", 
+xlab ="Subspecies",
+main = "Rate of Syllable Production",
+names = c("aikeni", "caniceps", "dorsalis", "hyemalis", "mearnsi", "oreganus"),
+col = c("green4","gold","darkorchid4","palevioletred1","firebrick3","royalblue"),
+border = "black", boxwex = .7, plot=TRUE
+)
+
+# Average silence duration boxplot
+oreganus <- df2$avg_silence_duration.ms.[which(df2$subspecies=="oreganus")]
+mearnsi <- df2$avg_silence_duration.ms.[which(df2$subspecies=="mearnsi")]
+hyemalis <- df2$avg_silence_duration.ms.[which(df2$subspecies=="hyemalis")]
+dorsalis <- df2$avg_silence_duration.ms.[which(df2$subspecies=="dorsalis")]
+caniceps <- df2$avg_silence_duration.ms.[which(df2$subspecies=="caniceps")]
+aikeni <- df2$avg_silence_duration.ms.[which(df2$subspecies=="aikeni")]
+
+boxplot(list(aikeni, caniceps, dorsalis, hyemalis, mearnsi, oreganus),
+ylab ="log(Millisecond)", 
+xlab ="Subspecies",
+ylim = c(1.75, 5),
+main = "Average Silence Duration",
+names = c("aikeni", "caniceps", "dorsalis", "hyemalis", "mearnsi", "oreganus"),
+col = c("green4","gold","darkorchid4","palevioletred1","firebrick3","royalblue"),
+border = "black", boxwex = .7, plot=TRUE
+)
+
+# Number of unique syllables boxplot
+oreganus <- df2$num_unique_syllables[which(df2$subspecies=="oreganus")]
+mearnsi <- df2$num_unique_syllables[which(df2$subspecies=="mearnsi")]
+hyemalis <- df2$num_unique_syllables[which(df2$subspecies=="hyemalis")]
+dorsalis <- df2$num_unique_syllables[which(df2$subspecies=="dorsalis")]
+caniceps <- df2$num_unique_syllables[which(df2$subspecies=="caniceps")]
+aikeni <- df2$num_unique_syllables[which(df2$subspecies=="aikeni")]
+
+boxplot(list(aikeni, caniceps, dorsalis, hyemalis, mearnsi, oreganus),
+ylab ="log(Number of unique syllables)", 
+xlab ="Subspecies",
+main = "Number of Unique Syllables",
+names = c("aikeni", "caniceps", "dorsalis", "hyemalis", "mearnsi", "oreganus"),
+col = c("green4","gold","darkorchid4","palevioletred1","firebrick3","royalblue"),
+border = "black", boxwex = .7, plot=TRUE
+)
+
+# Mean syllable stereotypy boxplot
+oreganus <- df2$mean_syllable_stereotypy[which(df2$subspecies=="oreganus")]
+mearnsi <- df2$mean_syllable_stereotypy[which(df2$subspecies=="mearnsi")]
+hyemalis <- df2$mean_syllable_stereotypy[which(df2$subspecies=="hyemalis")]
+dorsalis <- df2$mean_syllable_stereotypy[which(df2$subspecies=="dorsalis")]
+caniceps <- df2$mean_syllable_stereotypy[which(df2$subspecies=="caniceps")]
+aikeni <- df2$mean_syllable_stereotypy[which(df2$subspecies=="aikeni")]
+
+boxplot(list(aikeni, caniceps, dorsalis, hyemalis, mearnsi, oreganus),
+ylab ="log(Syllable stereotopy)", 
+xlab ="Subspecies",
+main = "Mean Syllable Stereotypy",
+names = c("aikeni", "caniceps", "dorsalis", "hyemalis", "mearnsi", "oreganus"),
+col = c("green4","gold","darkorchid4","palevioletred1","firebrick3","royalblue"),
+border = "black", boxwex = .7, plot=TRUE
+)
+
+# Average syllables upper frequency boxplot
+oreganus <- df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="oreganus")]
+mearnsi <- df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="mearnsi")]
+hyemalis <- df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="hyemalis")]
+dorsalis <- df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="dorsalis")]
+caniceps <- df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="caniceps")]
+aikeni <- df2$avg_sylls_upper_freq.Hz.[which(df2$subspecies=="aikeni")]
+
+boxplot(list(aikeni, caniceps, dorsalis, hyemalis, mearnsi, oreganus),
+ylab ="log(Frequency)", 
+xlab ="Subspecies",
+ylim = c(8.2, 9.4),
+main = "Average Syllable Upper Frequency",
+names = c("aikeni", "caniceps", "dorsalis", "hyemalis", "mearnsi", "oreganus"),
+col = c("green4","gold","darkorchid4","palevioletred1","firebrick3","royalblue"),
+border = "black", boxwex = .7, plot=TRUE
+)
+
+# Average syllables lower frequency boxplot
+oreganus <- df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="oreganus")]
+mearnsi <- df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="mearnsi")]
+hyemalis <- df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="hyemalis")]
+dorsalis <- df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="dorsalis")]
+caniceps <- df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="caniceps")]
+aikeni <- df2$avg_sylls_lower_freq.Hz.[which(df2$subspecies=="aikeni")]
+
+boxplot(list(aikeni, caniceps, dorsalis, hyemalis, mearnsi, oreganus),
+ylab ="log(Frequency)", 
+xlab ="Subspecies",
+ylim = c(7.25, 9),
+main = "Average Syllable Lower Frequency",
+names = c("aikeni", "caniceps", "dorsalis", "hyemalis", "mearnsi", "oreganus"),
+col = c("green4","gold","darkorchid4","palevioletred1","firebrick3","royalblue"),
+border = "black", boxwex = .7, plot=TRUE
+)
+
+# Average syllables frequency range boxplot
+oreganus <- df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="oreganus")]
+mearnsi <- df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="mearnsi")]
+hyemalis <- df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="hyemalis")]
+dorsalis <- df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="dorsalis")]
+caniceps <- df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="caniceps")]
+aikeni <- df2$avg_sylls_freq_range.Hz.[which(df2$subspecies=="aikeni")]
+
+boxplot(list(aikeni, caniceps, dorsalis, hyemalis, mearnsi, oreganus),
+ylab ="log(Frequency)", 
+xlab ="Subspecies",
+main = "Average Syllable Frequency Range",
+names = c("aikeni", "caniceps", "dorsalis", "hyemalis", "mearnsi", "oreganus"),
+col = c("green4","gold","darkorchid4","palevioletred1","firebrick3","royalblue"),
+border = "black", boxwex = .7, plot=TRUE
+)
+```

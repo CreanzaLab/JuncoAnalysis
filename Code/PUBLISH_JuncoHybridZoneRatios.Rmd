@@ -1,0 +1,231 @@
+---
+title: "Hybrid Analysis (Creating polygon around hybrid zones, then counting number of
+  parents and hybrids)"
+author: "Sarah Hourihan"
+date: "2023-07-13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Load the 'sp' package for point-in-polygon calculations
+library(sp)
+
+# Read CSV file containing eBird sightings of parent subspecies and hybrids
+points <- read.csv("/Users/sarahhourihan/Box/Creanza Lab/Sarah_Nicole/files_for_manuscript/PUBLISH_SimplifiedJuncoSightings.csv")
+
+# For each subspecies pair with observed hybrids, I listed coordinates of the vertices of the polygon defining the hybrid region. Using the eBird sightings map, I manually made a polygon around the region of the pair's hybrid sightings and obtained the polygon's vertices coordinates using Google maps. The "x" vector is the longitudes of the vertices and the "y" vector is the latitude of the vertices.
+```
+
+```{r}
+# hyemalis x oreganus hybrid zone counts
+
+# Define the polygon's vertices' coordinates in a data frame. Polygon encapsulates region of hybrid sightings.
+hyemalisxoreganus_hybridzone <- data.frame(
+  x = c(-151.96, -138.78, -130.43, -124.36, -122.87, -128.32, -124.16, -114.91, -114.08, -107.74, -105.66, -111.26, -108.94, -111.20, -116.22, -127.86, -149.59, -151.96), # X-coordinates of polygon vertices
+  y = c(59.41, 59.64, 53.50, 53.66, 50.92, 50.31, 46.12, 45.96, 43.75, 42.77, 45.05, 51.64, 53.40, 57.00, 53.29, 61.31, 61.99, 59.41)  # Y-coordinates of polygon vertices
+)
+
+# Convert the polygon coordinates to numeric vectors
+polygon_coords <- as.matrix(hyemalisxoreganus_hybridzone[, c("x", "y")])
+
+# Create a SpatialPolygon object from the polygon coordinates
+polygon <- SpatialPolygons(list(Polygons(list(Polygon(polygon_coords)), "polygon")))
+
+# Count the number of each parent species and hybrids in the hybrid zone
+hyemalis_count <- sum(
+  points$Subspecies == "hyemalis" &
+    point.in.polygon(points$Longitude, points$Latitude, polygon@polygons[[1]]@Polygons[[1]]@coords[, 1], polygon@polygons[[1]]@Polygons[[1]]@coords[, 2])
+)
+hyemalis_count # 3144 hyemalis sightings in region where hyemalis x oreganus hybrids were spotted
+
+oreganus_count <- sum(
+  points$Subspecies == "oreganus" &
+    point.in.polygon(points$Longitude, points$Latitude, polygon@polygons[[1]]@Polygons[[1]]@coords[, 1], polygon@polygons[[1]]@Polygons[[1]]@coords[, 2])
+)
+oreganus_count # 23,205 oreganus sightings in region where hyemalis x oreganus hybrids were spotted
+
+hyemalisxoreganus_count <- sum(
+  points$Subspecies == "hyemalis/oreganus" &
+    point.in.polygon(points$Longitude, points$Latitude, polygon@polygons[[1]]@Polygons[[1]]@coords[, 1], polygon@polygons[[1]]@Polygons[[1]]@coords[, 2])
+)
+hyemalisxoreganus_count # 95 hyemalis x oreganus hybrid sightings in region where hyemalis x oreganus hybrids were spotted
+```
+
+```{r}
+# mearnsi x caniceps hybrid zone counts
+
+# Define the polygon's vertices' coordinates in a data frame. Polygon encapsulates region of hybrid sightings.
+mearnsixcaniceps_hybridzone <- data.frame(
+  x = c(-115.55, -113.32, -112.61, -107.34, -106.16, -110.62, -107.36, -102.67, -105.73, -110.49, -108.26, -115.55), # X-coordinates of polygon vertices
+  y = c(42.90, 41.50, 39.73, 39.95, 39.02, 37.46, 36.57, 39.69, 41.94, 41.49, 43.27, 42.90)  # Y-coordinates of polygon vertices
+)
+
+# Convert the polygon coordinates to numeric vectors
+polygon_coords <- as.matrix(mearnsixcaniceps_hybridzone[, c("x", "y")])
+
+# Create a SpatialPolygon object from the polygon coordinates
+polygon <- SpatialPolygons(list(Polygons(list(Polygon(polygon_coords)), "polygon")))
+
+# Count the number of each parent species and hybrids in the hybrid zone
+mearnsi_count <- sum(
+  points$Subspecies == "mearnsi" &
+    point.in.polygon(points$Longitude, points$Latitude, polygon@polygons[[1]]@Polygons[[1]]@coords[, 1], polygon@polygons[[1]]@Polygons[[1]]@coords[, 2])
+)
+mearnsi_count # 641 mearnsi sightings in region where mearnsi x caniceps hybrids were spotted
+
+caniceps_count <- sum(
+  points$Subspecies == "caniceps" &
+    point.in.polygon(points$Longitude, points$Latitude, polygon@polygons[[1]]@Polygons[[1]]@coords[, 1], polygon@polygons[[1]]@Polygons[[1]]@coords[, 2])
+)
+caniceps_count # 9724 caniceps sightings in region where mearnsi x caniceps hybrids were spotted
+
+mearnsixcaniceps_count <- sum(
+  points$Subspecies == "mearnsi/caniceps" &
+    point.in.polygon(points$Longitude, points$Latitude, polygon@polygons[[1]]@Polygons[[1]]@coords[, 1], polygon@polygons[[1]]@Polygons[[1]]@coords[, 2])
+)
+mearnsixcaniceps_count # 59 mearnsi x caniceps hybrid sightings in region where mearnsi x caniceps hybrids were spotted
+```
+
+```{r}
+# mearnsi x aikeni hybrid zone counts
+
+# Define the polygon's vertices' coordinates in a data frame. Polygon encapsulates region of hybrid sightings.
+mearnsixaikeni_hybridzone <- data.frame(
+  x = c(-106.17, -105.29, -103.63, -104.32, -106.17), # X-coordinates of polygon vertices
+  y = c(40.79, 37.47, 37.47, 40.75, 40.79)  # Y-coordinates of polygon vertices
+)
+
+# Convert the polygon coordinates to numeric vectors
+polygon_coords <- as.matrix(mearnsixaikeni_hybridzone[, c("x", "y")])
+
+# Create a SpatialPolygon object from the polygon coordinates
+polygon <- SpatialPolygons(list(Polygons(list(Polygon(polygon_coords)), "polygon")))
+
+# Count the number of each parent species and hybrids in the hybrid zone
+mearnsi_count <- sum(
+  points$Subspecies == "mearnsi" &
+    point.in.polygon(points$Longitude, points$Latitude, polygon@polygons[[1]]@Polygons[[1]]@coords[, 1], polygon@polygons[[1]]@Polygons[[1]]@coords[, 2])
+)
+mearnsi_count # 0 mearnsi sightings in region where mearnsi x aikeni hybrids were spotted
+
+aikeni_count <- sum(
+  points$Subspecies == "aikeni" &
+    point.in.polygon(points$Longitude, points$Latitude, polygon@polygons[[1]]@Polygons[[1]]@coords[, 1], polygon@polygons[[1]]@Polygons[[1]]@coords[, 2])
+)
+aikeni_count # 0 aikeni sightings in region where mearnsi x aikeni hybrids were spotted
+
+mearnsixaikeni_count <- sum(
+  points$Subspecies == "mearnsi/aikeni" &
+    point.in.polygon(points$Longitude, points$Latitude, polygon@polygons[[1]]@Polygons[[1]]@coords[, 1], polygon@polygons[[1]]@Polygons[[1]]@coords[, 2])
+)
+mearnsixaikeni_count # 5 mearnsi x aikeni hybrid sightings in region where mearnsi x aikeni hybrids were spotted
+```
+
+```{r}
+# caniceps x dorsalis hybrid zone counts
+
+# Define the polygon's vertices' coordinates in a data frame. Polygon encapsulates region of hybrid sightings.
+canicepsxdorsalis_hybridzone <- data.frame(
+  x = c(-113.87, -114.53, -110.44, -113.87), # X-coordinates of polygon vertices
+  y = c(36.82, 35.02, 34.29, 36.82)  # Y-coordinates of polygon vertices
+)
+
+# Convert the polygon coordinates to numeric vectors
+polygon_coords <- as.matrix(canicepsxdorsalis_hybridzone[, c("x", "y")])
+
+# Create a SpatialPolygon object from the polygon coordinates
+polygon <- SpatialPolygons(list(Polygons(list(Polygon(polygon_coords)), "polygon")))
+
+# Count the number of each parent species and hybrids in the hybrid zone
+caniceps_count <- sum(
+  points$Subspecies == "caniceps" &
+    point.in.polygon(points$Longitude, points$Latitude, polygon@polygons[[1]]@Polygons[[1]]@coords[, 1], polygon@polygons[[1]]@Polygons[[1]]@coords[, 2])
+)
+caniceps_count # 2 caniceps sightings in region where caniceps x dorsalis hybrids were spotted
+
+dorsalis_count <- sum(
+  points$Subspecies == "dorsalis" &
+    point.in.polygon(points$Longitude, points$Latitude, polygon@polygons[[1]]@Polygons[[1]]@coords[, 1], polygon@polygons[[1]]@Polygons[[1]]@coords[, 2])
+)
+dorsalis_count # 520 dorsalis sightings in region where caniceps x dorsalis hybrids were spotted
+
+canicepsxdorsalis_count <- sum(
+  points$Subspecies == "caniceps/dorsalis" &
+    point.in.polygon(points$Longitude, points$Latitude, polygon@polygons[[1]]@Polygons[[1]]@coords[, 1], polygon@polygons[[1]]@Polygons[[1]]@coords[, 2])
+)
+canicepsxdorsalis_count # 3 caniceps x dorsalis hybrid sightings where caniceps x dorsalis hybrids were spotted
+```
+
+```{r}
+# oreganus x caniceps hybrid zone counts
+
+# Define the polygon's vertices' coordinates in a data frame. Polygon encapsulates region of hybrid sightings.
+oreganusxcaniceps_hybridzone <- data.frame(
+  x = c(-118.77, -119.91, -117.05, -118.77), # X-coordinates of polygon vertices
+  y = c(43.01, 41.92, 41.37, 43.01)  # Y-coordinates of polygon vertices
+)
+
+# Convert the polygon coordinates to numeric vectors
+polygon_coords <- as.matrix(oreganusxcaniceps_hybridzone[, c("x", "y")])
+
+# Create a SpatialPolygon object from the polygon coordinates
+polygon <- SpatialPolygons(list(Polygons(list(Polygon(polygon_coords)), "polygon")))
+
+# Count the number of each parent species and hybrids in the hybrid zone
+oreganus_count <- sum(
+  points$Subspecies == "oreganus" &
+    point.in.polygon(points$Longitude, points$Latitude, polygon@polygons[[1]]@Polygons[[1]]@coords[, 1], polygon@polygons[[1]]@Polygons[[1]]@coords[, 2])
+)
+oreganus_count # 55 oreganus sightings in region where oreganus x caniceps hybrids were spotted
+
+caniceps_count <- sum(
+  points$Subspecies == "caniceps" &
+    point.in.polygon(points$Longitude, points$Latitude, polygon@polygons[[1]]@Polygons[[1]]@coords[, 1], polygon@polygons[[1]]@Polygons[[1]]@coords[, 2])
+)
+caniceps_count # 0 caniceps sightings in region where oreganus x caniceps hybrids were spotted
+
+oreganusxcaniceps_count <- sum(
+  points$Subspecies == "oreganus/caniceps" &
+    point.in.polygon(points$Longitude, points$Latitude, polygon@polygons[[1]]@Polygons[[1]]@coords[, 1], polygon@polygons[[1]]@Polygons[[1]]@coords[, 2])
+)
+oreganusxcaniceps_count # 7 oreganus x caniceps hybrid sightings where oreganus x ccaniceps hybrids were spotted
+```
+
+```{r}
+# oreganus x mearnsi hybrid zone counts
+
+# Define the polygon's vertices' coordinates in a data frame. Polygon encapsulates region of hybrid sightings.
+oreganusxmearnsi_hybridzone <- data.frame(
+  x = c(-117.14, -111.55, -109.26, -112.17, -117.14), # X-coordinates of polygon vertices
+  y = c(43.31, 40.23, 46.31, 46.60, 43.31)  # Y-coordinates of polygon vertices
+)
+
+# Convert the polygon coordinates to numeric vectors
+polygon_coords <- as.matrix(oreganusxmearnsi_hybridzone[, c("x", "y")])
+
+# Create a SpatialPolygon object from the polygon coordinates
+polygon <- SpatialPolygons(list(Polygons(list(Polygon(polygon_coords)), "polygon")))
+
+# Count the number of each parent species and hybrids in the hybrid zone
+oreganus_count <- sum(
+  points$Subspecies == "oreganus" &
+    point.in.polygon(points$Longitude, points$Latitude, polygon@polygons[[1]]@Polygons[[1]]@coords[, 1], polygon@polygons[[1]]@Polygons[[1]]@coords[, 2])
+)
+oreganus_count # 776 oreganus sightings in region where oreganus x mearnsi hybrids were spotted
+
+mearnsi_count <- sum(
+  points$Subspecies == "mearnsi" &
+    point.in.polygon(points$Longitude, points$Latitude, polygon@polygons[[1]]@Polygons[[1]]@coords[, 1], polygon@polygons[[1]]@Polygons[[1]]@coords[, 2])
+)
+mearnsi_count # 2326 mearnsi sightings in region where oreganus x mearnsi hybrids were spotted
+
+oreganusxmearnsi_count <- sum(
+  points$Subspecies == "oreganus/mearnsi" &
+    point.in.polygon(points$Longitude, points$Latitude, polygon@polygons[[1]]@Polygons[[1]]@coords[, 1], polygon@polygons[[1]]@Polygons[[1]]@coords[, 2])
+)
+oreganusxmearnsi_count # 6 oreganus x mearnsi sightings in region where oreganus x mearnsi hybrids were spotted
+```

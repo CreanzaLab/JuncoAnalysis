@@ -1,0 +1,106 @@
+---
+title: "Junco GLMMs"
+author: "Sarah Hourihan"
+date: "2024-03-04"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Load package
+library(lme4)
+
+# Read CSV of raw song feature data
+SongFeatureData <- read.csv("/Users/sarahhourihan/Library/CloudStorage/Box-Box/Creanza Lab/Sarah_Nicole/files_for_manuscript/PUBLISH_SongFeatureData.csv")
+
+# Add column for recording ID number as a factor, which will be used as a random effect
+SongFeatureData$ID_Num_factor <- as.factor(SongFeatureData$ID_Num)
+SongFeatureData["subspecies"][SongFeatureData["subspecies"] == "unknown"] <- "0(unknown)"
+```
+
+```{r}
+## Average silence duration GLMM
+avg_silence_dur.glmm <- glmer(avg_silence_duration.ms. ~ scale(latitude) + scale(longitude) + subspecies + (1 | ID_Num_factor), data = SongFeatureData, family = gaussian(link = "log"), control = glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e8)))
+summary(avg_silence_dur.glmm)
+
+# Scaling latitude and longitude prevents very large Eigenvalues. family = gaussian(link = "log") is the best fit for these data. Using optimizer "bobyqa" and increasing max iterations to 2^8 allows for model to converge
+```
+
+```{r}
+## Average syllable duration GLMM
+avg_syllable_dur.glmm <- glmer(avg_syllable_duration.ms. ~ scale(latitude) + scale(longitude) + subspecies + (1 | ID_Num_factor), data = SongFeatureData, family = gaussian(link = "log"), control = glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e8)))
+summary(avg_syllable_dur.glmm)
+```
+
+```{r}
+## Average syllable frequency range GLMM
+avg_syll_freq_range.glmm <- glmer(avg_sylls_freq_range.Hz. ~ scale(latitude) + scale(longitude) + subspecies + (1 | ID_Num_factor), data = SongFeatureData, family = gaussian(link = "log"), control = glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e8)))
+summary(avg_syll_freq_range.glmm)
+```
+
+```{r}
+## Average syllable lower frequency GLMM
+avg_syll_lower_freq.glmm <- glmer(avg_sylls_lower_freq.Hz. ~ scale(latitude) + scale(longitude) + subspecies + (1 | ID_Num_factor), data = SongFeatureData, family = gaussian(link = "log"), control = glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e8)))
+summary(avg_syll_lower_freq.glmm)
+
+avg_syll_lower_freq.glm <- glm(avg_sylls_lower_freq.Hz. ~ scale(latitude) + scale(longitude) + subspecies, data = SongFeatureData, family = gaussian(link = "log"))
+summary(avg_syll_lower_freq.glm)
+
+# Model has a singular fit due to the random effect variance being 0. We checked whether this has an effect by running a GLM without the random effect. The fixed effect results remained the same, so the singular fit should not impact the fixed effect variable results.
+```
+
+```{r}
+## Average syllable upper frequency GLMM
+avg_syll_upper_freq.glmm <- glmer(avg_sylls_upper_freq.Hz. ~ scale(latitude) + scale(longitude) + subspecies + (1 | ID_Num_factor), data = SongFeatureData, family = gaussian(link = "log"), control = glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e8)))
+summary(avg_syll_upper_freq.glmm)
+
+avg_syll_upper_freq.glm <- glm(avg_sylls_upper_freq.Hz. ~ scale(latitude) + scale(longitude) + subspecies, data = SongFeatureData, family = gaussian(link = "log"))
+summary(avg_syll_upper_freq.glm)
+
+# Model has a singular fit due to the random effect variance being 0. We checked whether this has an effect by running a GLM without the random effect. The fixed effect results remained the same, so the singular fit should not impact the fixed effect variable results.
+```
+
+```{r}
+## Bout duration GLMM
+bout_dur.glmm <- glmer(bout_duration.ms. ~ scale(latitude) + scale(longitude) + subspecies + (1 | ID_Num_factor), data = SongFeatureData, family = gaussian(link = "log"), control = glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e8)))
+summary(bout_dur.glmm)
+
+bout_dur.glm <- glm(bout_duration.ms. ~ scale(latitude) + scale(longitude) + subspecies, data = SongFeatureData, family = gaussian(link = "log"))
+summary(bout_dur.glm)
+
+# Model has a singular fit due to the random effect variance being 0. We checked whether this has an effect by running a GLM without the random effect. The fixed effect results remained the same, so the singular fit should not impact the fixed effect variable results.
+```
+
+```{r}
+## Mean syllable stereotypy GLMM
+mean_syll_stereo.glmm <- glmer(mean_syllable_stereotypy ~ scale(latitude) + scale(longitude) + subspecies + (1 | ID_Num_factor), data = SongFeatureData, family = gaussian(link = "log"), control = glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e8)))
+summary(mean_syll_stereo.glmm)
+
+mean_syll_stereo.glm <- glm(mean_syllable_stereotypy ~ scale(latitude) + scale(longitude) + subspecies, data = SongFeatureData, family = gaussian(link = "log"))
+summary(mean_syll_stereo.glm)
+
+# Model has a singular fit due to the random effect variance being 0. We checked whether this has an effect by running a GLM without the random effect. The fixed effect results remained the same, so the singular fit should not impact the fixed effect variable results.
+```
+
+```{r}
+## Rate of syllable production GLMM
+syll_production_rate.glmm <- glmer((num_syllable_per_bout_duration.1.ms. * 100) ~ scale(latitude) + scale(longitude) + subspecies + (1 | ID_Num_factor), data = SongFeatureData, family = gaussian(link = "log"), control = glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e8)))
+summary(syll_production_rate.glmm)
+
+# Re-scaled variable because all values had very small numbers and the model was not converging
+```
+
+```{r}
+## Number of syllables GLMM
+num_sylls.glmm <- glmer(num_syllables ~ scale(latitude) + scale(longitude) + subspecies + (1 | ID_Num_factor), data = SongFeatureData, family = gaussian(link = "log"), control = glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e8)))
+summary(num_sylls.glmm)
+```
+
+```{r}
+## Number of unique syllables GLMM
+num_uniq_sylls.glmm <- glmer(num_unique_syllables ~ scale(latitude) + scale(longitude) + subspecies + (1 | ID_Num_factor), data = SongFeatureData, family = gaussian(link = "log"), control = glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e8)))
+summary(num_uniq_sylls.glmm)
+```

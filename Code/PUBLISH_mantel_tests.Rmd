@@ -1,0 +1,116 @@
+---
+title: "Mantel Correlation Tests"
+author: "Sarah Hourihan"
+date: "2024-02-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Load packages
+library(vegan)
+library(geosphere)
+library(adegenet)
+library(lme4)
+library(ape)
+```
+
+```{r}
+# Read in data 
+# Read in concatenated genetic data and make a dataframe of genetic sequence's latitudes and longitudes
+ConcFriisMetadata <- read.csv("/Users/sarahhourihan/Library/CloudStorage/Box-Box/Creanza Lab/Sarah_Nicole/files_for_manuscript/PUBLISH_ConcGeneticMetadata.csv")
+
+ConcFriislatlong <- data.frame(ConcFriisMetadata$Longitude, ConcFriisMetadata$Latitude)
+
+# Use aligned concatenated genetic data to get genetic distance
+ConcFriissnp <- fasta2genlight("/Users/sarahhourihan/Library/CloudStorage/Box-Box/Creanza Lab/Sarah_Nicole/files_for_manuscript/PUBLISH_ConcGenetic_AlignedSequences.fasta", snpOnly=TRUE)
+
+ConcFriisFasta = ape::read.FASTA("/Users/sarahhourihan/Library/CloudStorage/Box-Box/Creanza Lab/Sarah_Nicole/files_for_manuscript/PUBLISH_ConcGenetic_AlignedSequences.fasta", type = "DNA")
+    
+ConcFriisFullGeneticDist = dist.dna(ConcFriisFasta, model = "K80", pairwise.deletion = TRUE)
+
+## For using PCA of genetic data
+ConcFriispca <- glPca(ConcFriissnp, nf=10)
+ConcFriispca.dataset = as.data.frame(ConcFriispca$scores)
+ConcFriispca.dataset$isolates = row.names(ConcFriispca.dataset)
+ConcFriispca.dataset$spp = as.factor(ConcFriisMetadata[match(ConcFriissnp$ind.names, ConcFriisMetadata$Isolate),]$Subspecies_Friis)
+
+ConcFriisPC1PC2 <- ConcFriispca.dataset[,1:2]
+ConcFriisAllPCs <- ConcFriispca.dataset[,1:10]
+
+# Read in song-feature data and make data frame with PC1-PC10
+JuncoDataLog <- read.csv(file="/Users/sarahhourihan/Library/CloudStorage/Box-Box/Creanza Lab/Sarah_Nicole/files_for_manuscript/PUBLISH_JuncoSongData_Subspecies_and_ID.csv")
+juncos.pca <- prcomp(JuncoDataLog[,c(2:11)], center = TRUE, scale = TRUE)
+SongPCAs <- data.frame(juncos.pca$x[,1:10])
+SongPC1PC2 <- data.frame(juncos.pca$x[,1:2])
+
+# Read in latitudes and longitudes of song data and create a dataframe
+JuncoSongLatLongs <- read.csv("/Users/sarahhourihan/Library/CloudStorage/Box-Box/Creanza Lab/Sarah_Nicole/files_for_manuscript/PUBLISH_JuncoSongLatLongs.csv")
+SongLatLongs <- data.frame(JuncoSongLatLongs$longitude, JuncoSongLatLongs$latitude)
+
+# For song and genetic dataset comparisons
+songPCmedians <- read.csv("/Users/sarahhourihan/Library/CloudStorage/Box-Box/Creanza Lab/Sarah_Nicole/files_for_manuscript/PUBLISH_SongPC_Medians.csv")
+songmedianPC1PC2 <- data.frame(songPCmedians$PC1medians, songPCmedians$PC2medians)
+ConcFriisPCmedians <- read.csv("/Users/sarahhourihan/Library/CloudStorage/Box-Box/Creanza Lab/Sarah_Nicole/files_for_manuscript/PUBLISH_ConcGenetic_PC_Medians.csv")
+ConcFriismedianPC1PC2 <- data.frame(ConcFriisPCmedians$PC1medians, ConcFriisPCmedians$PC2medians)
+```
+
+```{r}
+# Convert datasets into distance matrices
+# Genetic distance matrix with PC1 and PC2
+dist_ConcFriispc1pc2 <- dist(ConcFriisPC1PC2, method = "euclidean")
+
+# Genetic distance matrix with all PCs
+dist_ConcFriisAllPCs <- dist(ConcFriisAllPCs, method = "euclidean")
+
+# Geographic distance matrix for locations of genetic sequences
+d.ConcFriislatlong <- distm(ConcFriislatlong, fun = distHaversine)
+dist_ConcFriislatlong <- as.dist(d.ConcFriislatlong)
+
+# Geographic distance matrix for song locations
+d.SongLatLongs <- distm(SongLatLongs, fun = distHaversine)
+dist_SongLatLongs <- as.dist(d.SongLatLongs)
+
+# Distance matrix for PC1 and PC2 of song-feature data
+dist_SongPC1PC2 <- dist(SongPC1PC2, method = "euclidean")
+
+# Distance matrix for all song-feature data PCs
+dist_SongPCAs <- dist(SongPCAs, method = "euclidean")
+
+# Distance matrix for median PC1 and PC2 of song-feature data by subspecies
+dist_songmedianPC1PC2 <- dist(songmedianPC1PC2, method = "euclidean")
+
+# Distance matrix for median PC1 and PC2 of genetic data by subspecies
+dist_ConcFriismedianPC1PC2 <- dist(ConcFriismedianPC1PC2, method = "euclidean")
+```
+
+```{r}
+# Run Mantel tests
+# Between genetic and geographic data
+full_genetic_geographic_mantel <- mantel(ConcFriisFullGeneticDist, dist_ConcFriislatlong, method = "spearman", permutations = 10000, na.rm = TRUE)
+full_genetic_geographic_mantel # r = 0.08807, significance = 0.079492
+
+geneticPC1PC2_geographic_mantel <- mantel(dist_ConcFriispc1pc2, dist_ConcFriislatlong, method = "spearman", permutations = 10000, na.rm = TRUE)
+geneticPC1PC2_geographic_mantel # r = 0.09714, significance = 0.015598
+
+geneticAllPCs_geographic_mantel <- mantel(dist_ConcFriisAllPCs, dist_ConcFriislatlong, method = "spearman", permutations = 10000, na.rm = TRUE)
+geneticAllPCs_geographic_mantel # r = 0.1047, significance = 0.043396
+
+# Between song and geographic data
+songAllPCs_geographic_mantel <- mantel(dist_SongPCAs, dist_SongLatLongs, method = "spearman", permutations = 1000, na.rm = TRUE)
+songAllPCs_geographic_mantel # r = 0.024, significance = 0.0010
+
+songPC1PC2_geographic_mantel <- mantel(dist_SongPC1PC2, dist_SongLatLongs, method = "spearman", permutations = 1000, na.rm = TRUE)
+songPC1PC2_geographic_mantel # r = 0.04296, P = 0.000999
+
+# Between song and genetic data
+song_genetic_mantel <- mantel(dist_songmedianPC1PC2, dist_ConcFriismedianPC1PC2, method = "spearman", permutations = 1000, na.rm = TRUE)
+song_genetic_mantel # r = 0.3459, significance = 0.097222
+```
+
+
+
+

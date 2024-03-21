@@ -1,0 +1,161 @@
+---
+title: "Song distinguishability regressions"
+author: "Nicole Creanza"
+date: "2024-02-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+install.packages("geosphere")
+install.packages("adegenet")
+
+library(vegan)
+library(geosphere)
+library(adegenet)
+library(lme4)
+library(ape)
+```
+
+```{r}
+# Read in datasets
+
+Genetic_Geographic_MLaccuracy <- read.table("/Users/nicolecreanza/Box/creanzalab@vanderbilt.edu - Box creanza Resourceid's Files and Folders/Creanza Lab/Sarah_Nicole/PUBLISH_Genetic_Geographic_MLsongaccuracy.txt",sep="\t",header=T)
+
+hist(Genetic_Geographic_MLaccuracy$Balanced.accuracy.of.song.classifier)
+library(ggplot2)
+
+ggplot(Genetic_Geographic_MLaccuracy, aes(x = Median.geographic.distance..km., y = Balanced.accuracy.of.song.classifier)) +
+  geom_point() +
+  theme_minimal() +
+  geom_smooth(method = "lm", se = TRUE, aes(group = 1)) +
+  labs(x = "Median geographic distance (km)",
+       y = "Random forest classifier accuracy") +
+  ylim(0, 1)
+
+
+ggplot(Genetic_Geographic_MLaccuracy, aes(x = Average.genetic.distance, y = Balanced.accuracy.of.song.classifier)) +
+  geom_point() +
+  theme_minimal() +
+  geom_smooth(method = "lm", se = TRUE, aes(group = 1)) +
+  labs(x = "Average genetic distance",
+       y = "Random forest classifier accuracy") +
+  ylim(0, 1)
+
+ggplot(Genetic_Geographic_MLaccuracy, aes(x = Pairwise.Fst, y = Balanced.accuracy.of.song.classifier)) +
+  geom_point() +
+  theme_minimal() +
+  geom_smooth(method = "lm", se = TRUE, aes(group = 1)) +
+  labs(x = "Average Pairwise Fst",
+       y = "Random forest classifier accuracy") +
+  ylim(0, 1)
+
+
+
+summary(lm(Balanced.accuracy.of.song.classifier~Median.geographic.distance..km.,data=Genetic_Geographic_MLaccuracy))
+summary(lm(Balanced.accuracy.of.song.classifier~Average.genetic.distance,data=Genetic_Geographic_MLaccuracy))
+summary(lm(Balanced.accuracy.of.song.classifier~Pairwise.Fst,data=Genetic_Geographic_MLaccuracy))
+
+
+# Resample the balanced accuracy values 100000 times to see if it is surprising that the mean of 3 values is 0.84
+ResampleMLaccuracy <- Genetic_Geographic_MLaccuracy$Balanced.accuracy.of.song.classifier
+n_resamples <- 100000
+set.seed(51)  # for reproducibility
+resampled_means <- replicate(n_resamples, mean(sample(ResampleMLaccuracy, 3, replace = FALSE)))
+
+# Plot a histogram of the resampled means
+hist(resampled_means, breaks = 20)
+AdjNonHybMeanValue <- 0.84
+percent_greater <- sum(resampled_means > AdjNonHybMeanValue)/n_resamples
+print(paste("Percent of resampled means greater than", AdjNonHybMeanValue, ":", percent_greater)) #0.065
+
+
+ConcFriisMetadata <- read.csv("/Users/nicolecreanza/Box/creanzalab@vanderbilt.edu - Box creanza Resourceid's Files and Folders/Creanza Lab/Sarah_Nicole/files_for_manuscript/PUBLISH_ConcGeneticMetadata.csv")
+
+ConcFriissnp <- fasta2genlight("/Users/nicolecreanza/Box/creanzalab@vanderbilt.edu - Box creanza Resourceid's Files and Folders/Creanza Lab/Sarah_Nicole/files_for_manuscript/PUBLISH_ConcGenetic_AlignedSequences.fasta", snpOnly=TRUE)
+
+ConcFriisFasta = ape::read.FASTA("/Users/nicolecreanza/Box/creanzalab@vanderbilt.edu - Box creanza Resourceid's Files and Folders/Creanza Lab/Sarah_Nicole/files_for_manuscript/PUBLISH_ConcGenetic_AlignedSequences.fasta", type = "DNA")
+
+    
+ConcFriisFullGeneticDist = dist.dna(ConcFriisFasta, model = "K80", pairwise.deletion = TRUE)
+
+## To use PCA for genetic data
+ConcFriispca <- glPca(ConcFriissnp, nf=10)
+ConcFriispca.dataset = as.data.frame(ConcFriispca$scores)
+ConcFriispca.dataset$isolates = row.names(ConcFriispca.dataset)
+ConcFriispca.dataset$spp = as.factor(ConcFriisMetadata[match(ConcFriissnp$ind.names, ConcFriisMetadata$Isolate),]$Subspecies_Friis)
+
+ConcFriislatlong <- data.frame(ConcFriisMetadata$Longitude, ConcFriisMetadata$Latitude)
+
+JuncoDataLog <- read.csv(file="/Users/sarahhourihan/Library/CloudStorage/Box-Box/Creanza Lab/Sarah_Nicole/files_for_manuscript/PUBLISH_JuncoSongData_Subspecies_and_ID.csv")
+juncos.pca <- prcomp(JuncoDataLog[,c(2:11)], center = TRUE, scale = TRUE)
+SongPCAs <- data.frame(juncos.pca$x[,1:10])
+
+JuncoSongLatLongs <- read.csv("/Users/sarahhourihan/Library/CloudStorage/Box-Box/Creanza Lab/Sarah_Nicole/files_for_manuscript/PUBLISH_JuncoSongLatLongs.csv")
+SongLatLongs <- data.frame(JuncoSongLatLongs$longitude, JuncoSongLatLongs$latitude)
+
+# For song and genetic dataset comparisons
+songPCmedians <- read.csv("/Users/nicolecreanza/Box/creanzalab@vanderbilt.edu - Box creanza Resourceid's Files and Folders/Creanza Lab/Sarah_Nicole/files_for_manuscript/PUBLISH_SongPC_Medians.csv")
+songmedianPC1PC2 <- data.frame(songPCmedians$PC1medians, songPCmedians$PC2medians)
+ConcFriisPCmedians <- read.csv("/Users/nicolecreanza/Box/creanzalab@vanderbilt.edu - Box creanza Resourceid's Files and Folders/Creanza Lab/Sarah_Nicole/files_for_manuscript/PUBLISH_ConcGenetic_PC_Medians.csv")
+ConcFriismedianPC1PC2 <- data.frame(ConcFriisPCmedians$PC1medians, ConcFriisPCmedians$PC2medians)
+
+latlongmedians <- read.csv("/Users/nicolecreanza/Box/creanzalab@vanderbilt.edu - Box creanza Resourceid's Files and Folders/Creanza Lab/Sarah_Nicole/latlongmedians.csv")
+
+```
+
+```{r}
+# Convert datasets into distance matrices
+ConcFriisPC1PC2 <- ConcFriispca.dataset[,1:2]
+dist_ConcFriispc1pc2 <- dist(ConcFriisPC1PC2, method = "euclidean")
+
+d.ConcFriislatlong <- distm(ConcFriislatlong, fun = distHaversine)
+dist_ConcFriislatlong <- as.dist(d.ConcFriislatlong)
+
+d.SongLatLongs <- distm(SongLatLongs, fun = distHaversine)
+dist_SongLatLongs <- as.dist(d.SongLatLongs)
+
+dist_SongPCAs <- dist(SongPCAs, method = "euclidean")
+
+dist_songmedianPC1PC2 <- dist(songmedianPC1PC2, method = "euclidean")
+
+#dist_ConcFriismedianPC1PC2 <- dist(ConcFriismedianPC1PC2, method = "euclidean")
+ConcFriisFullGeneticDistMat = as.matrix(ConcFriisFullGeneticDist)
+mean(mean(ConcFriisFullGeneticDistMat[which(ConcFriisMetadata$Subspecies_Friis=="oreganus"),which(ConcFriisMetadata$Subspecies_Friis=="hyemalis")]))
+
+mean(mean(ConcFriisFullGeneticDistMat[which(ConcFriisMetadata$Subspecies_Friis=="dorsalis"),which(ConcFriisMetadata$Subspecies_Friis=="mearnsi")]))
+
+
+medianlatlongs <- data.frame(latlongmedians$longmedian, latlongmedians$latmedian)
+d.ConcFriislatlongmedian <- distm(medianlatlongs, fun = distHaversine)
+dist_ConcFriislatlongmedian <- as.dist(d.ConcFriislatlongmedian)
+
+```
+
+```{r}
+# Run Mantel commands
+# Between genetic and geographic data
+full_genetic_geographic_mantel <- mantel(ConcFriisGeneticDist, dist_ConcFriislatlong, method = "spearman", permutations = 10000, na.rm = TRUE)
+full_genetic_geographic_mantel
+
+geneticPC_geographic_mantel <- mantel(dist_ConcFriispc1pc2, dist_ConcFriislatlong, method = "spearman", permutations = 10000, na.rm = TRUE)
+geneticPC_geographic_mantel
+# Between song and geographic data
+song_geographic_mantel <- mantel(dist_SongPCAs, dist_SongLatLongs, method = "spearman", permutations = 1000, na.rm = TRUE)
+song_geographic_mantel
+
+# Between song and genetic data
+song_genetic_mantel <- mantel(dist_songmedianPC1PC2, dist_ConcFriismedianPC1PC2, method = "spearman", permutations = 1000, na.rm = TRUE)
+song_genetic_mantel
+
+### Mantel can take multi-dimensional data: 
+### For genetic distance, use raw sequences instead of genetic PCA
+### For song data, use all PCs
+```
+
+
+
+

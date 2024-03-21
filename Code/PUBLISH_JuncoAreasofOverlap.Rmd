@@ -1,0 +1,1373 @@
+---
+title: "Area of overlap for subspecies pairs and counts in regions of overlap"
+author: "Sarah Hourihan"
+date: "2023-07-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+### Calculating the area of overlap for subspecies pairs
+
+## Load the required packages
+library(rgeos)
+library(sp)
+library(rgdal)
+library(tidyverse)
+library(ggplot2)
+library(sf)
+library(ggspatial)
+
+# Load the CSV file containing the coordinates of dark-eyed junco sightings by subspecies. Restricted to breeding season (March-August)
+simplified_junco_sightings <- read.csv("/Users/sarahhourihan/Box/Creanza Lab/Sarah_Nicole/files_for_manuscript/PUBLISH_SimplifiedJuncoSightings.csv")
+```
+
+```{r}
+# hyemalis x oreganus area overlap calculation + plot
+
+# Specify the target UTM coordinate system zone that best captures the subspecies' ranges
+utm_proj <- "+proj=utm +zone=14 +ellips=WGS84"
+
+# Extract the coordinates for each subspecies
+hyemalis_coords <- simplified_junco_sightings %>%
+  filter(Subspecies == "hyemalis") %>%
+  select(Longitude, Latitude) %>%
+  mutate(Subspecies = "hyemalis")
+
+oreganus_coords <- simplified_junco_sightings %>%
+  filter(Subspecies == "oreganus") %>%
+  select(Longitude, Latitude) %>%
+  mutate(Subspecies = "oreganus")
+
+# Create SpatialPointsDataFrame objects from the subspecies coordinates
+hyemalis_spdf <- SpatialPointsDataFrame(hyemalis_coords[, c("Longitude", "Latitude")], hyemalis_coords)
+oreganus_spdf <- SpatialPointsDataFrame(oreganus_coords[, c("Longitude", "Latitude")], oreganus_coords)
+
+# Define the geographic coordinate system, WGS84
+geo_proj <- CRS("+proj=longlat +datum=WGS84")
+
+# Assign CRS to the subspecies data
+proj4string(hyemalis_spdf) <- geo_proj
+proj4string(oreganus_spdf) <- geo_proj
+
+# Transform the subspecies polygons to the UTM coordinate system
+hyemalis_proj <- spTransform(hyemalis_spdf, utm_proj)
+oreganus_proj <- spTransform(oreganus_spdf, utm_proj)
+
+# Estimate the convex hull polygons for each subspecies in the UTM coordinate system
+hyemalis_hull_proj <- gConvexHull(hyemalis_proj)
+oreganus_hull_proj <- gConvexHull(oreganus_proj)
+
+# Calculate the intersection between the two polygons
+intersection_proj <- gIntersection(hyemalis_hull_proj, oreganus_hull_proj, byid = TRUE)
+
+# Calculate the area of the intersection in square kilometers
+intersection_area_in_sq.km <- gArea(intersection_proj) / 1e+06
+intersection_area_in_sq.km # 2,421,435 km^2
+
+hyemalis_area_in_sq.km <- gArea(hyemalis_hull_proj) / 1e+06
+hyemalis_area_in_sq.km # 20,728,820 km^2
+
+oreganus_area_in_sq.km <- gArea(oreganus_hull_proj) / 1e+06
+oreganus_area_in_sq.km # 4,344,178 km^2
+
+realized_potential_overlap_area <- intersection_area_in_sq.km / oreganus_area_in_sq.km # actual intersection area divided by the area of the subspecies with smaller range (actual overlap / potential for overlap)
+realized_potential_overlap_area # 0.5573977
+
+# Convert the polygons to sf objects
+hyemalis_sf <- st_as_sf(hyemalis_hull_proj)
+oreganus_sf <- st_as_sf(oreganus_hull_proj)
+intersection_sf <- st_as_sf(intersection_proj)
+
+# Create a data frame for polygons and area of overlap
+polygons_df <- rbind(
+  data.frame(geometry = hyemalis_sf, Subspecies = "hyemalis"),
+  data.frame(geometry = oreganus_sf, Subspecies = "oreganus"),
+  data.frame(geometry = intersection_sf, Subspecies = "overlap")
+)
+
+# Plot the polygons and area of overlap
+ggplot() +
+  geom_sf(data = polygons_df, aes(fill = Subspecies, geometry = geometry), color = "black", alpha = 0.5) +
+  theme_bw()
+
+# Now count how many hybrid and parent sightings are in the area of overlap
+# Convert the sightings data to an sf object with geographic coordinates
+simplified_junco_sightings_sf <- st_as_sf(simplified_junco_sightings, coords = c("Longitude", "Latitude"), crs = geo_proj)
+
+# Transform the sightings data to the UTM coordinate system
+simplified_junco_sightings_utm <- st_transform(simplified_junco_sightings_sf, crs = utm_proj)
+
+# Filter the sightings data for each subspecies and hybrids
+hyemalis_data <- simplified_junco_sightings_utm %>%
+  filter(Subspecies == "hyemalis")
+
+oreganus_data <- simplified_junco_sightings_utm %>%
+  filter(Subspecies == "oreganus")
+
+hyemalisxoreganus_data <- simplified_junco_sightings_utm %>%
+  filter(Subspecies == "hyemalis/oreganus")
+
+# Check if each subspecies' or hybrids' point falls within the intersection polygon
+in_intersection_hyemalis <- st_within(hyemalis_data, intersection_sf)
+in_intersection_oreganus <- st_within(oreganus_data, intersection_sf)
+in_intersection_hyemalisxoreganus <- st_within(hyemalisxoreganus_data, intersection_sf)
+
+# Count the number of individuals from each group that fall within the intersection polygon
+hyemalis_count <- sum(!sapply(in_intersection_hyemalis, is_empty))
+hyemalis_count # 2079 hyemalis sightings in region of overlap
+oreganus_count <- sum(!sapply(in_intersection_oreganus, is_empty))
+oreganus_count # 13,645 oreganus sightings in region of overlap
+hyemalisxoreganus_count <- sum(!sapply(in_intersection_hyemalisxoreganus, is_empty))
+hyemalisxoreganus_count # 78 hyemalis x oreganus hybrids in region of overlap
+```
+
+```{r}
+# mearnsi x caniceps area overlap calculation + plot
+
+# Specify the target UTM coordinate system zone that best captures the subspecies' ranges
+utm_proj <- "+proj=utm +zone=12 +ellips=WGS84"
+
+# Extract the coordinates for each subspecies
+mearnsi_coords <- simplified_junco_sightings %>%
+  filter(Subspecies == "mearnsi") %>%
+  select(Longitude, Latitude) %>%
+  mutate(Subspecies = "mearnsi")
+
+caniceps_coords <- simplified_junco_sightings %>%
+  filter(Subspecies == "caniceps") %>%
+  select(Longitude, Latitude) %>%
+  mutate(Subspecies = "caniceps")
+
+# Create SpatialPointsDataFrame objects from the subspecies coordinates
+mearnsi_spdf <- SpatialPointsDataFrame(mearnsi_coords[, c("Longitude", "Latitude")], mearnsi_coords)
+caniceps_spdf <- SpatialPointsDataFrame(caniceps_coords[, c("Longitude", "Latitude")], caniceps_coords)
+
+# Define the geographic coordinate system, WGS84
+geo_proj <- CRS("+proj=longlat +datum=WGS84")
+
+# Assign CRS to the subspecies data
+proj4string(mearnsi_spdf) <- geo_proj
+proj4string(caniceps_spdf) <- geo_proj
+
+# Transform the subspecies polygons to the UTM coordinate system
+mearnsi_proj <- spTransform(mearnsi_spdf, utm_proj)
+caniceps_proj <- spTransform(caniceps_spdf, utm_proj)
+
+# Estimate the convex hull polygons for each subspecies in the UTM coordinate system
+mearnsi_hull_proj <- gConvexHull(mearnsi_proj)
+caniceps_hull_proj <- gConvexHull(caniceps_proj)
+
+# Calculate the intersection between the two polygons
+intersection_proj <- gIntersection(mearnsi_hull_proj, caniceps_hull_proj, byid = TRUE)
+
+# Calculate the area of the intersection in square kilometers
+intersection_area_in_sq.km <- gArea(intersection_proj) / 1e+06
+intersection_area_in_sq.km # 322,959.4 km^2
+
+mearnsi_area_in_sq.km <- gArea(mearnsi_hull_proj) / 1e+06
+mearnsi_area_in_sq.km # 747,936.9 km^2
+
+caniceps_area_in_sq.km <- gArea(caniceps_hull_proj) / 1e+06
+caniceps_area_in_sq.km # 1,294,806 km^2
+
+realized_potential_overlap_area <- intersection_area_in_sq.km / mearnsi_area_in_sq.km # actual intersection area divided by the area of the subspecies with smaller range (actual overlap / potential for overlap)
+realized_potential_overlap_area # 0.4318003
+
+# Convert the polygons to sf objects
+mearnsi_sf <- st_as_sf(mearnsi_hull_proj)
+caniceps_sf <- st_as_sf(caniceps_hull_proj)
+intersection_sf <- st_as_sf(intersection_proj)
+
+# Create a data frame for polygons and area of overlap
+polygons_df <- rbind(
+  data.frame(geometry = mearnsi_sf, Subspecies = "mearnsi"),
+  data.frame(geometry = caniceps_sf, Subspecies = "caniceps"),
+  data.frame(geometry = intersection_sf, Subspecies = "overlap")
+)
+
+# Plot the polygons and area of overlap
+ggplot() +
+  geom_sf(data = polygons_df, aes(fill = Subspecies, geometry = geometry), color = "black", alpha = 0.5) +
+  theme_bw()
+
+# Now count how many hybrid and parent sightings are in the area of overlap
+# Convert the sightings data to an sf object with geographic coordinates
+simplified_junco_sightings_sf <- st_as_sf(simplified_junco_sightings, coords = c("Longitude", "Latitude"), crs = geo_proj)
+
+# Transform the sightings data to the UTM coordinate system
+simplified_junco_sightings_utm <- st_transform(simplified_junco_sightings_sf, crs = utm_proj)
+
+# Filter the sightings data for each subspecies and hybrids
+mearnsi_data <- simplified_junco_sightings_utm %>%
+  filter(Subspecies == "mearnsi")
+
+caniceps_data <- simplified_junco_sightings_utm %>%
+  filter(Subspecies == "caniceps")
+
+mearnsixcaniceps_data <- simplified_junco_sightings_utm %>%
+  filter(Subspecies == "mearnsi/caniceps")
+
+# Check if each subspecies' or hybrids' point falls within the intersection polygon
+in_intersection_mearnsi <- st_within(mearnsi_data, intersection_sf)
+in_intersection_caniceps <- st_within(caniceps_data, intersection_sf)
+in_intersection_mearnsixcaniceps <- st_within(mearnsixcaniceps_data, intersection_sf)
+
+# Count the number of individuals from each group that fall within the intersection polygon
+mearnsi_count <- sum(!sapply(in_intersection_mearnsi, is_empty))
+mearnsi_count # 1656 mearnsi sightings in region of overlap
+caniceps_count <- sum(!sapply(in_intersection_caniceps, is_empty))
+caniceps_count # 1653 caniceps sightings in region of overlap
+mearnsixcaniceps_count <- sum(!sapply(in_intersection_mearnsixcaniceps, is_empty))
+mearnsixcaniceps_count # 47 mearnsi x caniceps hybrids in region of overlap
+```
+
+```{r}
+# mearnsi x aikeni area overlap calculation + plot
+
+# Specify the target UTM coordinate system zone that best captures the subspecies' ranges
+utm_proj <- "+proj=utm +zone=13 +ellips=WGS84"
+
+# Extract the coordinates for each subspecies
+mearnsi_coords <- simplified_junco_sightings %>%
+  filter(Subspecies == "mearnsi") %>%
+  select(Longitude, Latitude) %>%
+  mutate(Subspecies = "mearnsi")
+
+aikeni_coords <- simplified_junco_sightings %>%
+  filter(Subspecies == "aikeni") %>%
+  select(Longitude, Latitude) %>%
+  mutate(Subspecies = "aikeni")
+
+# Create SpatialPointsDataFrame objects from the subspecies coordinates
+mearnsi_spdf <- SpatialPointsDataFrame(mearnsi_coords[, c("Longitude", "Latitude")], mearnsi_coords)
+aikeni_spdf <- SpatialPointsDataFrame(aikeni_coords[, c("Longitude", "Latitude")], aikeni_coords)
+
+# Define the geographic coordinate system, WGS84
+geo_proj <- CRS("+proj=longlat +datum=WGS84")
+
+# Assign CRS to the subspecies data
+proj4string(mearnsi_spdf) <- geo_proj
+proj4string(aikeni_spdf) <- geo_proj
+
+# Transform the subspecies polygons to the UTM coordinate system
+mearnsi_proj <- spTransform(mearnsi_spdf, utm_proj)
+aikeni_proj <- spTransform(aikeni_spdf, utm_proj)
+
+# Estimate the convex hull polygons for each subspecies in the UTM coordinate system
+mearnsi_hull_proj <- gConvexHull(mearnsi_proj)
+aikeni_hull_proj <- gConvexHull(aikeni_proj)
+
+# Calculate the intersection between the two polygons
+intersection_proj <- gIntersection(mearnsi_hull_proj, aikeni_hull_proj, byid = TRUE)
+
+# Calculate the area of the intersection in square kilometers
+intersection_area_in_sq.km <- gArea(intersection_proj) / 1e+06
+intersection_area_in_sq.km # 99,304.74 km^2
+
+mearnsi_area_in_sq.km <- gArea(mearnsi_hull_proj) / 1e+06
+mearnsi_area_in_sq.km # 751,448.7 km^2
+
+aikeni_area_in_sq.km <- gArea(aikeni_hull_proj) / 1e+06
+aikeni_area_in_sq.km # 384,094.9 km^2
+
+realized_potential_overlap_area <- intersection_area_in_sq.km / aikeni_area_in_sq.km # actual intersection area divided by the area of the subspecies with smaller range (actual overlap / potential for overlap)
+realized_potential_overlap_area # 0.2585422
+
+# Convert the polygons to sf objects
+mearnsi_sf <- st_as_sf(mearnsi_hull_proj)
+aikeni_sf <- st_as_sf(aikeni_hull_proj)
+intersection_sf <- st_as_sf(intersection_proj)
+
+# Create a data frame for polygons and area of overlap
+polygons_df <- rbind(
+  data.frame(geometry = mearnsi_sf, Subspecies = "mearnsi"),
+  data.frame(geometry = aikeni_sf, Subspecies = "aikeni"),
+  data.frame(geometry = intersection_sf, Subspecies = "overlap")
+)
+
+# Plot the polygons and area of overlap
+ggplot() +
+  geom_sf(data = polygons_df, aes(fill = Subspecies, geometry = geometry), color = "black", alpha = 0.5) +
+  theme_bw()
+
+# Now count how many hybrid and parent sightings are in the area of overlap
+# Convert the sightings data to an sf object with geographic coordinates
+simplified_junco_sightings_sf <- st_as_sf(simplified_junco_sightings, coords = c("Longitude", "Latitude"), crs = geo_proj)
+
+# Transform the sightings data to the UTM coordinate system
+simplified_junco_sightings_utm <- st_transform(simplified_junco_sightings_sf, crs = utm_proj)
+
+# Filter the sightings data for each subspecies and hybrids
+mearnsi_data <- simplified_junco_sightings_utm %>%
+  filter(Subspecies == "mearnsi")
+
+aikeni_data <- simplified_junco_sightings_utm %>%
+  filter(Subspecies == "aikeni")
+
+mearnsixaikeni_data <- simplified_junco_sightings_utm %>%
+  filter(Subspecies == "mearnsi/aikeni")
+
+# Check if each subspecies' or hybrids' point falls within the intersection polygon
+in_intersection_mearnsi <- st_within(mearnsi_data, intersection_sf)
+in_intersection_aikeni <- st_within(aikeni_data, intersection_sf)
+in_intersection_mearnsixaikeni <- st_within(mearnsixaikeni_data, intersection_sf)
+
+# Count the number of individuals from each group that fall within the intersection polygon
+mearnsi_count <- sum(!sapply(in_intersection_mearnsi, is_empty))
+mearnsi_count # 191 mearnsi sightings in region of overlap
+aikeni_count <- sum(!sapply(in_intersection_aikeni, is_empty))
+aikeni_count # # 26 aikeni sightings in region of overlap
+mearnsixaikeni_count <- sum(!sapply(in_intersection_mearnsixaikeni, is_empty))
+mearnsixaikeni_count # no mearnsi x aikeni hybrid sightings in the region of overlap (they're outside the region of overlap)
+```
+
+```{r}
+# caniceps x dorsalis area overlap calculation + plot
+
+# Specify the target UTM coordinate system zone that best captures the subspecies' ranges
+utm_proj <- "+proj=utm +zone=12 +ellips=WGS84"
+
+# Extract the coordinates for each subspecies
+caniceps_coords <- simplified_junco_sightings %>%
+  filter(Subspecies == "caniceps") %>%
+  select(Longitude, Latitude) %>%
+  mutate(Subspecies = "caniceps")
+
+dorsalis_coords <- simplified_junco_sightings %>%
+  filter(Subspecies == "dorsalis") %>%
+  select(Longitude, Latitude) %>%
+  mutate(Subspecies = "dorsalis")
+
+# Create SpatialPointsDataFrame objects from the subspecies coordinates
+caniceps_spdf <- SpatialPointsDataFrame(caniceps_coords[, c("Longitude", "Latitude")], caniceps_coords)
+dorsalis_spdf <- SpatialPointsDataFrame(dorsalis_coords[, c("Longitude", "Latitude")], dorsalis_coords)
+
+# Define the geographic coordinate system, WGS84
+geo_proj <- CRS("+proj=longlat +datum=WGS84")
+
+# Assign CRS to the subspecies data
+proj4string(caniceps_spdf) <- geo_proj
+proj4string(dorsalis_spdf) <- geo_proj
+
+# Transform the subspecies polygons to the UTM coordinate system
+caniceps_proj <- spTransform(caniceps_spdf, utm_proj)
+dorsalis_proj <- spTransform(dorsalis_spdf, utm_proj)
+
+# Estimate the convex hull polygons for each subspecies in the UTM coordinate system
+caniceps_hull_proj <- gConvexHull(caniceps_proj)
+dorsalis_hull_proj <- gConvexHull(dorsalis_proj)
+
+# Calculate the intersection between the two polygons
+intersection_proj <- gIntersection(caniceps_hull_proj, dorsalis_hull_proj, byid = TRUE)
+
+# Calculate the area of the intersection in square kilometers
+intersection_area_in_sq.km <- gArea(intersection_proj) / 1e+06
+intersection_area_in_sq.km # 82,478.29 km^2
+
+caniceps_area_in_sq.km <- gArea(caniceps_hull_proj) / 1e+06
+caniceps_area_in_sq.km # 1,294,806 km^2
+
+dorsalis_area_in_sq.km <- gArea(dorsalis_hull_proj) / 1e+06
+dorsalis_area_in_sq.km # 286,615.2 km^2
+
+realized_potential_overlap_area <- intersection_area_in_sq.km / dorsalis_area_in_sq.km # actual intersection area divided by the area of the subspecies with smaller range (actual overlap / potential for overlap)
+realized_potential_overlap_area # 0.2877666
+
+# Convert the polygons to sf objects
+caniceps_sf <- st_as_sf(caniceps_hull_proj)
+dorsalis_sf <- st_as_sf(dorsalis_hull_proj)
+intersection_sf <- st_as_sf(intersection_proj)
+
+# Create a data frame for polygons and area of overlap
+polygons_df <- rbind(
+  data.frame(geometry = caniceps_sf, Subspecies = "caniceps"),
+  data.frame(geometry = dorsalis_sf, Subspecies = "dorsalis"),
+  data.frame(geometry = intersection_sf, Subspecies = "overlap")
+)
+
+# Plot the polygons and area of overlap
+ggplot() +
+  geom_sf(data = polygons_df, aes(fill = Subspecies, geometry = geometry), color = "black", alpha = 0.5) +
+  theme_bw()
+
+# Now count how many hybrid and parent sightings are in the area of overlap
+# Convert the sightings data to an sf object with geographic coordinates
+simplified_junco_sightings_sf <- st_as_sf(simplified_junco_sightings, coords = c("Longitude", "Latitude"), crs = geo_proj)
+
+# Transform the sightings data to the UTM coordinate system
+simplified_junco_sightings_utm <- st_transform(simplified_junco_sightings_sf, crs = utm_proj)
+
+# Filter the sightings data for each subspecies and hybrids
+dorsalis_data <- simplified_junco_sightings_utm %>%
+  filter(Subspecies == "dorsalis")
+
+caniceps_data <- simplified_junco_sightings_utm %>%
+  filter(Subspecies == "caniceps")
+
+canicepsxdorsalis_data <- simplified_junco_sightings_utm %>%
+  filter(Subspecies == "caniceps/dorsalis")
+
+# Check if each subspecies' or hybrids' point falls within the intersection polygon
+in_intersection_dorsalis <- st_within(dorsalis_data, intersection_sf)
+in_intersection_caniceps <- st_within(caniceps_data, intersection_sf)
+in_intersection_canicepsxdorsalis <- st_within(canicepsxdorsalis_data, intersection_sf)
+
+# Count the number of individuals from each group that fall within the intersection polygon
+dorsalis_count <- sum(!sapply(in_intersection_dorsalis, is_empty))
+dorsalis_count # 435 dorsalis sightings in region of overlap
+caniceps_count <- sum(!sapply(in_intersection_caniceps, is_empty))
+caniceps_count # 291 caniceps sightings in region of overlap
+canicepsxdorsalis_count <- sum(!sapply(in_intersection_canicepsxdorsalis, is_empty))
+canicepsxdorsalis_count # no caniceps x dorsalis hybrid sightings in the region of overlap (they're outside the region of overlap)
+```
+
+```{r}
+# oreganus x caniceps area overlap calculation + plot
+
+# Specify the target UTM coordinate system zone that best captures the subspecies' ranges
+utm_proj <- "+proj=utm +zone=11 +ellips=WGS84"
+
+# Extract the coordinates for each subspecies
+caniceps_coords <- simplified_junco_sightings %>%
+  filter(Subspecies == "caniceps") %>%
+  select(Longitude, Latitude) %>%
+  mutate(Subspecies = "caniceps")
+
+oreganus_coords <- simplified_junco_sightings %>%
+  filter(Subspecies == "oreganus") %>%
+  select(Longitude, Latitude) %>%
+  mutate(Subspecies = "oreganus")
+
+# Create SpatialPointsDataFrame objects from the subspecies coordinates
+caniceps_spdf <- SpatialPointsDataFrame(caniceps_coords[, c("Longitude", "Latitude")], caniceps_coords)
+oreganus_spdf <- SpatialPointsDataFrame(oreganus_coords[, c("Longitude", "Latitude")], oreganus_coords)
+
+# Define the geographic coordinate system, WGS84
+geo_proj <- CRS("+proj=longlat +datum=WGS84")
+
+# Assign CRS to the subspecies data
+proj4string(caniceps_spdf) <- geo_proj
+proj4string(oreganus_spdf) <- geo_proj
+
+# Transform the subspecies polygons to the UTM coordinate system
+caniceps_proj <- spTransform(caniceps_spdf, utm_proj)
+oreganus_proj <- spTransform(oreganus_spdf, utm_proj)
+
+# Estimate the convex hull polygons for each subspecies in the UTM coordinate system
+caniceps_hull_proj <- gConvexHull(caniceps_proj)
+oreganus_hull_proj <- gConvexHull(oreganus_proj)
+
+# Calculate the intersection between the two polygons
+intersection_proj <- gIntersection(caniceps_hull_proj, oreganus_hull_proj, byid = TRUE)
+
+# Calculate the area of the intersection in square kilometers
+intersection_area_in_sq.km <- gArea(intersection_proj) / 1e+06
+intersection_area_in_sq.km # 550,298.4 km^2
+
+caniceps_area_in_sq.km <- gArea(caniceps_hull_proj) / 1e+06
+caniceps_area_in_sq.km # 1,309,700 km^2
+
+oreganus_area_in_sq.km <- gArea(oreganus_hull_proj) / 1e+06
+oreganus_area_in_sq.km # 4,115,024 km^2
+
+realized_potential_overlap_area <- intersection_area_in_sq.km / caniceps_area_in_sq.km # actual intersection area divided by the area of the subspecies with smaller range (actual overlap / potential for overlap)
+realized_potential_overlap_area # 0.4201714
+
+# Convert the polygons to sf objects
+caniceps_sf <- st_as_sf(caniceps_hull_proj)
+oreganus_sf <- st_as_sf(oreganus_hull_proj)
+intersection_sf <- st_as_sf(intersection_proj)
+
+# Create a data frame for polygons and area of overlap
+polygons_df <- rbind(
+  data.frame(geometry = caniceps_sf, Subspecies = "caniceps"),
+  data.frame(geometry = oreganus_sf, Subspecies = "oreganus"),
+  data.frame(geometry = intersection_sf, Subspecies = "overlap")
+)
+
+# Plot the polygons and area of overlap
+ggplot() +
+  geom_sf(data = polygons_df, aes(fill = Subspecies, geometry = geometry), color = "black", alpha = 0.5) +
+  theme_bw()
+
+# Now count how many hybrid and parent sightings are in the area of overlap
+# Convert the sightings data to an sf object with geographic coordinates
+simplified_junco_sightings_sf <- st_as_sf(simplified_junco_sightings, coords = c("Longitude", "Latitude"), crs = geo_proj)
+
+# Transform the sightings data to the UTM coordinate system
+simplified_junco_sightings_utm <- st_transform(simplified_junco_sightings_sf, crs = utm_proj)
+
+# Filter the sightings data for each subspecies and hybrids
+oreganus_data <- simplified_junco_sightings_utm %>%
+  filter(Subspecies == "oreganus")
+
+caniceps_data <- simplified_junco_sightings_utm %>%
+  filter(Subspecies == "caniceps")
+
+oreganusxcaniceps_data <- simplified_junco_sightings_utm %>%
+  filter(Subspecies == "oreganus/caniceps")
+
+# Check if each subspecies' or hybrids' point falls within the intersection polygon
+in_intersection_oreganus <- st_within(oreganus_data, intersection_sf)
+in_intersection_caniceps <- st_within(caniceps_data, intersection_sf)
+in_intersection_oreganusxcaniceps <- st_within(oreganusxcaniceps_data, intersection_sf)
+
+# Count the number of individuals from each group that fall within the intersection polygon
+oreganus_count <- sum(!sapply(in_intersection_oreganus, is_empty))
+oreganus_count # 270 oreganus sightings in region of overlap
+caniceps_count <- sum(!sapply(in_intersection_caniceps, is_empty))
+caniceps_count # 2112 caniceps sightings in region of overlap
+oreganusxcaniceps_count <- sum(!sapply(in_intersection_oreganusxcaniceps, is_empty))
+oreganusxcaniceps_count # no caniceps x oreganus hybrids in region of overlap (they're outside the region of overlap)
+```
+
+```{r}
+# oreganus x mearnsi area overlap calculation + plot
+
+# Specify the target UTM coordinate system zone that best captures the subspecies' ranges
+utm_proj <- "+proj=utm +zone=11 +ellips=WGS84"
+
+# Extract the coordinates for each subspecies
+mearnsi_coords <- simplified_junco_sightings %>%
+  filter(Subspecies == "mearnsi") %>%
+  select(Longitude, Latitude) %>%
+  mutate(Subspecies = "mearnsi")
+
+oreganus_coords <- simplified_junco_sightings %>%
+  filter(Subspecies == "oreganus") %>%
+  select(Longitude, Latitude) %>%
+  mutate(Subspecies = "oreganus")
+
+# Create SpatialPointsDataFrame objects from the subspecies coordinates
+mearnsi_spdf <- SpatialPointsDataFrame(mearnsi_coords[, c("Longitude", "Latitude")], mearnsi_coords)
+oreganus_spdf <- SpatialPointsDataFrame(oreganus_coords[, c("Longitude", "Latitude")], oreganus_coords)
+
+# Define the geographic coordinate system, WGS84
+geo_proj <- CRS("+proj=longlat +datum=WGS84")
+
+# Assign CRS to the subspecies data
+proj4string(mearnsi_spdf) <- geo_proj
+proj4string(oreganus_spdf) <- geo_proj
+
+# Transform the subspecies polygons to the UTM coordinate system
+mearnsi_proj <- spTransform(mearnsi_spdf, utm_proj)
+oreganus_proj <- spTransform(oreganus_spdf, utm_proj)
+
+# Estimate the convex hull polygons for each subspecies in the UTM coordinate system
+mearnsi_hull_proj <- gConvexHull(mearnsi_proj)
+oreganus_hull_proj <- gConvexHull(oreganus_proj)
+
+# Calculate the intersection between the two polygons
+intersection_proj <- gIntersection(mearnsi_hull_proj, oreganus_hull_proj, byid = TRUE)
+
+# Calculate the area of the intersection in square kilometers
+intersection_area_in_sq.km <- gArea(intersection_proj) / 1e+06
+intersection_area_in_sq.km # 610,538 km^2
+
+mearnsi_area_in_sq.km <- gArea(mearnsi_hull_proj) / 1e+06
+mearnsi_area_in_sq.km # 752,896.9 km^2
+
+oreganus_area_in_sq.km <- gArea(oreganus_hull_proj) / 1e+06
+oreganus_area_in_sq.km # 4,115,024 km^2
+
+realized_potential_overlap_area <- intersection_area_in_sq.km / mearnsi_area_in_sq.km # actual intersection area divided by the area of the subspecies with smaller range (actual overlap / potential for overlap)
+realized_potential_overlap_area # 0.8109185
+
+# Convert the polygons to sf objects
+mearnsi_sf <- st_as_sf(mearnsi_hull_proj)
+oreganus_sf <- st_as_sf(oreganus_hull_proj)
+intersection_sf <- st_as_sf(intersection_proj)
+
+# Create a data frame for polygons and area of overlap
+polygons_df <- rbind(
+  data.frame(geometry = mearnsi_sf, Subspecies = "mearnsi"),
+  data.frame(geometry = oreganus_sf, Subspecies = "oreganus"),
+  data.frame(geometry = intersection_sf, Subspecies = "overlap")
+)
+
+# Plot the polygons and area of overlap
+ggplot() +
+  geom_sf(data = polygons_df, aes(fill = Subspecies, geometry = geometry), color = "black", alpha = 0.5) +
+  theme_bw()
+
+# Now count how many hybrid and parent sightings are in the area of overlap
+# Convert the sightings data to an sf object with geographic coordinates
+simplified_junco_sightings_sf <- st_as_sf(simplified_junco_sightings, coords = c("Longitude", "Latitude"), crs = geo_proj)
+
+# Transform the sightings data to the UTM coordinate system
+simplified_junco_sightings_utm <- st_transform(simplified_junco_sightings_sf, crs = utm_proj)
+
+# Filter the sightings data for each subspecies and hybrids
+oreganus_data <- simplified_junco_sightings_utm %>%
+  filter(Subspecies == "oreganus")
+
+mearnsi_data <- simplified_junco_sightings_utm %>%
+  filter(Subspecies == "mearnsi")
+
+oreganusxmearnsi_data <- simplified_junco_sightings_utm %>%
+  filter(Subspecies == "oreganus/mearnsi")
+
+# Check if each subspecies' or hybrids' point falls within the intersection polygon
+in_intersection_oreganus <- st_within(oreganus_data, intersection_sf)
+in_intersection_mearnsi <- st_within(mearnsi_data, intersection_sf)
+in_intersection_oreganusxmearnsi <- st_within(oreganusxmearnsi_data, intersection_sf)
+
+# Count the number of individuals from each group that fall within the intersection polygon
+oreganus_count <- sum(!sapply(in_intersection_oreganus, is_empty))
+oreganus_count # 2752 oreganus sightings in region of overlap
+mearnsi_count <- sum(!sapply(in_intersection_mearnsi, is_empty))
+mearnsi_count # 3254 mearnsi sightings in region of overlap
+oreganusxmearnsi_count <- sum(!sapply(in_intersection_oreganusxmearnsi, is_empty))
+oreganusxmearnsi_count # 6 oreganus x mearnsi hybrid sightings in region of overlap
+```
+
+```{r}
+# hyemalis x aikeni area overlap calculation + plot
+
+# Specify the target UTM coordinate system zone that best captures the subspecies' ranges
+utm_proj <- "+proj=utm +zone=14 +ellips=WGS84"
+
+# Extract the coordinates for each subspecies
+hyemalis_coords <- simplified_junco_sightings %>%
+  filter(Subspecies == "hyemalis") %>%
+  select(Longitude, Latitude) %>%
+  mutate(Subspecies = "hyemalis")
+
+aikeni_coords <- simplified_junco_sightings %>%
+  filter(Subspecies == "aikeni") %>%
+  select(Longitude, Latitude) %>%
+  mutate(Subspecies = "aikeni")
+
+# Create SpatialPointsDataFrame objects from the subspecies coordinates
+hyemalis_spdf <- SpatialPointsDataFrame(hyemalis_coords[, c("Longitude", "Latitude")], hyemalis_coords)
+aikeni_spdf <- SpatialPointsDataFrame(aikeni_coords[, c("Longitude", "Latitude")], aikeni_coords)
+
+# Define the geographic coordinate system, WGS84
+geo_proj <- CRS("+proj=longlat +datum=WGS84")
+
+# Assign CRS to the subspecies data
+proj4string(hyemalis_spdf) <- geo_proj
+proj4string(aikeni_spdf) <- geo_proj
+
+# Transform the subspecies polygons to the UTM coordinate system
+hyemalis_proj <- spTransform(hyemalis_spdf, utm_proj)
+aikeni_proj <- spTransform(aikeni_spdf, utm_proj)
+
+# Estimate the convex hull polygons for each subspecies in the UTM coordinate system
+hyemalis_hull_proj <- gConvexHull(hyemalis_proj)
+aikeni_hull_proj <- gConvexHull(aikeni_proj)
+
+# Calculate the intersection between the two polygons
+intersection_proj <- gIntersection(hyemalis_hull_proj, aikeni_hull_proj, byid = TRUE)
+
+# Calculate the area of the intersection in square kilometers
+intersection_area_in_sq.km <- gArea(intersection_proj) / 1e+06
+intersection_area_in_sq.km # 379,030.8 km^2
+
+hyemalis_area_in_sq.km <- gArea(hyemalis_hull_proj) / 1e+06
+hyemalis_area_in_sq.km # 20,728,820 km^2
+
+aikeni_area_in_sq.km <- gArea(aikeni_hull_proj) / 1e+06
+aikeni_area_in_sq.km # 384,776.9 km^2
+
+realized_potential_overlap_area <- intersection_area_in_sq.km / aikeni_area_in_sq.km # actual intersection area divided by the area of the subspecies with smaller range (actual overlap / potential for overlap)
+realized_potential_overlap_area # 0.9850665
+
+# Convert the polygons to sf objects
+hyemalis_sf <- st_as_sf(hyemalis_hull_proj)
+aikeni_sf <- st_as_sf(aikeni_hull_proj)
+intersection_sf <- st_as_sf(intersection_proj)
+
+# Create a data frame for polygons and area of overlap
+polygons_df <- rbind(
+  data.frame(geometry = hyemalis_sf, Subspecies = "hyemalis"),
+  data.frame(geometry = aikeni_sf, Subspecies = "aikeni"),
+  data.frame(geometry = intersection_sf, Subspecies = "overlap")
+)
+
+# Plot the polygons and area of overlap
+ggplot() +
+  geom_sf(data = polygons_df, aes(fill = Subspecies, geometry = geometry), color = "black", alpha = 0.5) +
+  theme_bw()
+
+# Now count how many hybrid and parent sightings are in the area of overlap
+# Convert the sightings data to an sf object with geographic coordinates
+simplified_junco_sightings_sf <- st_as_sf(simplified_junco_sightings, coords = c("Longitude", "Latitude"), crs = geo_proj)
+
+# Transform the sightings data to the UTM coordinate system
+simplified_junco_sightings_utm <- st_transform(simplified_junco_sightings_sf, crs = utm_proj)
+
+# Filter the sightings data for each subspecies and hybrids
+hyemalis_data <- simplified_junco_sightings_utm %>%
+  filter(Subspecies == "hyemalis")
+
+aikeni_data <- simplified_junco_sightings_utm %>%
+  filter(Subspecies == "aikeni")
+
+# Check if each subspecies' or hybrids' point falls within the intersection polygon
+in_intersection_hyemalis <- st_within(hyemalis_data, intersection_sf)
+in_intersection_aikeni <- st_within(aikeni_data, intersection_sf)
+
+# Count the number of individuals from each group that fall within the intersection polygon
+hyemalis_count <- sum(!sapply(in_intersection_hyemalis, is_empty))
+hyemalis_count # 0 hyemalis sightings in region of overlap
+aikeni_count <- sum(!sapply(in_intersection_aikeni, is_empty))
+aikeni_count # 698 aikeni sightings in region of overlap
+```
+
+```{r}
+# hyemalis x caniceps area overlap calculation + plot
+
+# Specify the target UTM coordinate system zone that best captures the subspecies' ranges
+utm_proj <- "+proj=utm +zone=14 +ellips=WGS84"
+
+# Extract the coordinates for each subspecies
+hyemalis_coords <- simplified_junco_sightings %>%
+  filter(Subspecies == "hyemalis") %>%
+  select(Longitude, Latitude) %>%
+  mutate(Subspecies = "hyemalis")
+
+caniceps_coords <- simplified_junco_sightings %>%
+  filter(Subspecies == "caniceps") %>%
+  select(Longitude, Latitude) %>%
+  mutate(Subspecies = "caniceps")
+
+# Create SpatialPointsDataFrame objects from the subspecies coordinates
+hyemalis_spdf <- SpatialPointsDataFrame(hyemalis_coords[, c("Longitude", "Latitude")], hyemalis_coords)
+caniceps_spdf <- SpatialPointsDataFrame(caniceps_coords[, c("Longitude", "Latitude")], caniceps_coords)
+
+# Define the geographic coordinate system, WGS84
+geo_proj <- CRS("+proj=longlat +datum=WGS84")
+
+# Assign CRS to the subspecies data
+proj4string(hyemalis_spdf) <- geo_proj
+proj4string(caniceps_spdf) <- geo_proj
+
+# Transform the subspecies polygons to the UTM coordinate system
+hyemalis_proj <- spTransform(hyemalis_spdf, utm_proj)
+caniceps_proj <- spTransform(caniceps_spdf, utm_proj)
+
+# Estimate the convex hull polygons for each subspecies in the UTM coordinate system
+hyemalis_hull_proj <- gConvexHull(hyemalis_proj)
+caniceps_hull_proj <- gConvexHull(caniceps_proj)
+
+# Calculate the intersection between the two polygons
+intersection_proj <- gIntersection(hyemalis_hull_proj, caniceps_hull_proj, byid = TRUE)
+
+# Calculate the area of the intersection in square kilometers
+intersection_area_in_sq.km <- gArea(intersection_proj) / 1e+06
+intersection_area_in_sq.km # 161,511.8 km^2
+
+hyemalis_area_in_sq.km <- gArea(hyemalis_hull_proj) / 1e+06
+hyemalis_area_in_sq.km # 20,728,820 km^2
+
+caniceps_area_in_sq.km <- gArea(caniceps_hull_proj) / 1e+06
+caniceps_area_in_sq.km # 1,316,835 km^2
+
+realized_potential_overlap_area <- intersection_area_in_sq.km / caniceps_area_in_sq.km # actual intersection area divided by the area of the subspecies with smaller range (actual overlap / potential for overlap)
+realized_potential_overlap_area # 0.1226515
+
+# Convert the polygons to sf objects
+hyemalis_sf <- st_as_sf(hyemalis_hull_proj)
+caniceps_sf <- st_as_sf(caniceps_hull_proj)
+intersection_sf <- st_as_sf(intersection_proj)
+
+# Create a data frame for polygons and area of overlap
+polygons_df <- rbind(
+  data.frame(geometry = hyemalis_sf, Subspecies = "hyemalis"),
+  data.frame(geometry = caniceps_sf, Subspecies = "caniceps"),
+  data.frame(geometry = intersection_sf, Subspecies = "overlap")
+)
+
+# Plot the polygons and area of overlap
+ggplot() +
+  geom_sf(data = polygons_df, aes(fill = Subspecies, geometry = geometry), color = "black", alpha = 0.5) +
+  theme_bw()
+
+# Now count how many hybrid and parent sightings are in the area of overlap
+# Convert the sightings data to an sf object with geographic coordinates
+simplified_junco_sightings_sf <- st_as_sf(simplified_junco_sightings, coords = c("Longitude", "Latitude"), crs = geo_proj)
+
+# Transform the sightings data to the UTM coordinate system
+simplified_junco_sightings_utm <- st_transform(simplified_junco_sightings_sf, crs = utm_proj)
+
+# Filter the sightings data for each subspecies and hybrids
+hyemalis_data <- simplified_junco_sightings_utm %>%
+  filter(Subspecies == "hyemalis")
+
+caniceps_data <- simplified_junco_sightings_utm %>%
+  filter(Subspecies == "caniceps")
+
+# Check if each subspecies' or hybrids' point falls within the intersection polygon
+in_intersection_hyemalis <- st_within(hyemalis_data, intersection_sf)
+in_intersection_caniceps <- st_within(caniceps_data, intersection_sf)
+
+# Count the number of individuals from each group that fall within the intersection polygon
+hyemalis_count <- sum(!sapply(in_intersection_hyemalis, is_empty))
+hyemalis_count # 0 hyemalis sightings in region of overlap
+caniceps_count <- sum(!sapply(in_intersection_caniceps, is_empty))
+caniceps_count # 42 caniceps sightings in region of overlap
+```
+
+```{r}
+# hyemalis x dorsalis area overlap calculation + plot
+
+# Specify the target UTM coordinate system zone that best captures the subspecies' ranges
+utm_proj <- "+proj=utm +zone=13 +ellips=WGS84"
+
+# Extract the coordinates for each subspecies
+hyemalis_coords <- simplified_junco_sightings %>%
+  filter(Subspecies == "hyemalis") %>%
+  select(Longitude, Latitude) %>%
+  mutate(Subspecies = "hyemalis")
+
+dorsalis_coords <- simplified_junco_sightings %>%
+  filter(Subspecies == "dorsalis") %>%
+  select(Longitude, Latitude) %>%
+  mutate(Subspecies = "dorsalis")
+
+# Create SpatialPointsDataFrame objects from the subspecies coordinates
+hyemalis_spdf <- SpatialPointsDataFrame(hyemalis_coords[, c("Longitude", "Latitude")], hyemalis_coords)
+dorsalis_spdf <- SpatialPointsDataFrame(dorsalis_coords[, c("Longitude", "Latitude")], dorsalis_coords)
+
+# Define the geographic coordinate system, WGS84
+geo_proj <- CRS("+proj=longlat +datum=WGS84")
+
+# Assign CRS to the subspecies data
+proj4string(hyemalis_spdf) <- geo_proj
+proj4string(dorsalis_spdf) <- geo_proj
+
+# Transform the subspecies polygons to the UTM coordinate system
+hyemalis_proj <- spTransform(hyemalis_spdf, utm_proj)
+dorsalis_proj <- spTransform(dorsalis_spdf, utm_proj)
+
+# Estimate the convex hull polygons for each subspecies in the UTM coordinate system
+hyemalis_hull_proj <- gConvexHull(hyemalis_proj)
+dorsalis_hull_proj <- gConvexHull(dorsalis_proj)
+
+# Calculate the intersection between the two polygons
+intersection_proj <- gIntersection(hyemalis_hull_proj, dorsalis_hull_proj, byid = TRUE)
+
+# Calculate the area of the intersection in square kilometers
+intersection_area_in_sq.km <- gArea(intersection_proj) / 1e+06 # <- error because there is no intersection area for this subspecies pair
+
+# Convert the polygons to sf objects
+hyemalis_sf <- st_as_sf(hyemalis_hull_proj)
+dorsalis_sf <- st_as_sf(dorsalis_hull_proj)
+intersection_sf <- st_as_sf(intersection_proj) # <- error because there is no intersection area for this subspecies pair
+
+# Create a data frame for polygons and area of overlap
+polygons_df <- rbind(
+  data.frame(geometry = hyemalis_sf, Subspecies = "hyemalis"),
+  data.frame(geometry = dorsalis_sf, Subspecies = "dorsalis")
+)
+
+# Plot the polygons and area of overlap
+ggplot() +
+  geom_sf(data = polygons_df, aes(fill = Subspecies, geometry = geometry), color = "black", alpha = 0.5) +
+  theme_bw()
+
+# No area of overlap so will not count individuals from each subspecies
+```
+
+```{r}
+# hyemalis x mearnsi area overlap calculation + plot
+
+# Specify the target UTM coordinate system zone that best captures the subspecies' ranges
+utm_proj <- "+proj=utm +zone=13 +ellips=WGS84"
+
+# Extract the coordinates for each subspecies
+hyemalis_coords <- simplified_junco_sightings %>%
+  filter(Subspecies == "hyemalis") %>%
+  select(Longitude, Latitude) %>%
+  mutate(Subspecies = "hyemalis")
+
+mearnsi_coords <- simplified_junco_sightings %>%
+  filter(Subspecies == "mearnsi") %>%
+  select(Longitude, Latitude) %>%
+  mutate(Subspecies = "mearnsi")
+
+# Create SpatialPointsDataFrame objects from the subspecies coordinates
+hyemalis_spdf <- SpatialPointsDataFrame(hyemalis_coords[, c("Longitude", "Latitude")], hyemalis_coords)
+mearnsi_spdf <- SpatialPointsDataFrame(mearnsi_coords[, c("Longitude", "Latitude")], mearnsi_coords)
+
+# Define the geographic coordinate system, WGS84
+geo_proj <- CRS("+proj=longlat +datum=WGS84")
+
+# Assign CRS to the subspecies data
+proj4string(hyemalis_spdf) <- geo_proj
+proj4string(mearnsi_spdf) <- geo_proj
+
+# Transform the subspecies polygons to the UTM coordinate system
+hyemalis_proj <- spTransform(hyemalis_spdf, utm_proj)
+mearnsi_proj <- spTransform(mearnsi_spdf, utm_proj)
+
+# Estimate the convex hull polygons for each subspecies in the UTM coordinate system
+hyemalis_hull_proj <- gConvexHull(hyemalis_proj)
+mearnsi_hull_proj <- gConvexHull(mearnsi_proj)
+
+# Calculate the intersection between the two polygons
+intersection_proj <- gIntersection(hyemalis_hull_proj, mearnsi_hull_proj, byid = TRUE)
+
+# Calculate the area of the intersection in square kilometers
+intersection_area_in_sq.km <- gArea(intersection_proj) / 1e+06
+intersection_area_in_sq.km # 420,931.3 km^2
+
+mearnsi_area_in_sq.km <- gArea(mearnsi_hull_proj) / 1e+06
+mearnsi_area_in_sq.km # 751,448.7 km^2
+
+hyemalis_area_in_sq.km <- gArea(hyemalis_hull_proj) / 1e+06
+hyemalis_area_in_sq.km # 20,903,713 km^2
+
+realized_potential_overlap_area <- intersection_area_in_sq.km / mearnsi_area_in_sq.km # actual intersection area divided by the area of the subspecies with smaller range (actual overlap / potential for overlap)
+realized_potential_overlap_area # 0.5601597
+
+# Convert the polygons to sf objects
+hyemalis_sf <- st_as_sf(hyemalis_hull_proj)
+mearnsi_sf <- st_as_sf(mearnsi_hull_proj)
+intersection_sf <- st_as_sf(intersection_proj)
+
+# Create a data frame for polygons and area of overlap
+polygons_df <- rbind(
+  data.frame(geometry = hyemalis_sf, Subspecies = "hyemalis"),
+  data.frame(geometry = mearnsi_sf, Subspecies = "mearnsi"),
+  data.frame(geometry = intersection_sf, Subspecies = "overlap")
+)
+
+# Plot the polygons and area of overlap
+ggplot() +
+  geom_sf(data = polygons_df, aes(fill = Subspecies, geometry = geometry), color = "black", alpha = 0.5) +
+  theme_bw()
+
+# Now count how many hybrid and parent sightings are in the area of overlap
+# Convert the sightings data to an sf object with geographic coordinates
+simplified_junco_sightings_sf <- st_as_sf(simplified_junco_sightings, coords = c("Longitude", "Latitude"), crs = geo_proj)
+
+# Transform the sightings data to the UTM coordinate system
+simplified_junco_sightings_utm <- st_transform(simplified_junco_sightings_sf, crs = utm_proj)
+
+# Filter the sightings data for each subspecies and hybrids
+hyemalis_data <- simplified_junco_sightings_utm %>%
+  filter(Subspecies == "hyemalis")
+
+mearnsi_data <- simplified_junco_sightings_utm %>%
+  filter(Subspecies == "mearnsi")
+
+# Check if each subspecies' or hybrids' point falls within the intersection polygon
+in_intersection_hyemalis <- st_within(hyemalis_data, intersection_sf)
+in_intersection_mearnsi <- st_within(mearnsi_data, intersection_sf)
+
+# Count the number of individuals from each group that fall within the intersection polygon
+hyemalis_count <- sum(!sapply(in_intersection_hyemalis, is_empty))
+hyemalis_count # 0 hyemalis sightings in region of overlap
+mearnsi_count <- sum(!sapply(in_intersection_mearnsi, is_empty))
+mearnsi_count # 1950 mearnsi sightings in region of overlap
+```
+
+```{r}
+# oreganus x aikeni area overlap calculation + plot
+
+# Specify the target UTM coordinate system zone that best captures the subspecies' ranges
+utm_proj <- "+proj=utm +zone=13 +ellips=WGS84"
+
+# Extract the coordinates for each subspecies
+oreganus_coords <- simplified_junco_sightings %>%
+  filter(Subspecies == "oreganus") %>%
+  select(Longitude, Latitude) %>%
+  mutate(Subspecies = "oreganus")
+
+aikeni_coords <- simplified_junco_sightings %>%
+  filter(Subspecies == "aikeni") %>%
+  select(Longitude, Latitude) %>%
+  mutate(Subspecies = "aikeni")
+
+# Create SpatialPointsDataFrame objects from the subspecies coordinates
+oreganus_spdf <- SpatialPointsDataFrame(oreganus_coords[, c("Longitude", "Latitude")], oreganus_coords)
+aikeni_spdf <- SpatialPointsDataFrame(aikeni_coords[, c("Longitude", "Latitude")], aikeni_coords)
+
+# Define the geographic coordinate system, WGS84
+geo_proj <- CRS("+proj=longlat +datum=WGS84")
+
+# Assign CRS to the subspecies data
+proj4string(oreganus_spdf) <- geo_proj
+proj4string(aikeni_spdf) <- geo_proj
+
+# Transform the subspecies polygons to the UTM coordinate system
+oreganus_proj <- spTransform(oreganus_spdf, utm_proj)
+aikeni_proj <- spTransform(aikeni_spdf, utm_proj)
+
+# Estimate the convex hull polygons for each subspecies in the UTM coordinate system
+oreganus_hull_proj <- gConvexHull(oreganus_proj)
+aikeni_hull_proj <- gConvexHull(aikeni_proj)
+
+# Calculate the intersection between the two polygons
+intersection_proj <- gIntersection(oreganus_hull_proj, aikeni_hull_proj, byid = TRUE)
+
+# Calculate the area of the intersection in square kilometers
+intersection_area_in_sq.km <- gArea(intersection_proj) / 1e+06
+intersection_area_in_sq.km # 31,277.35 km^2
+
+oreganus_area_in_sq.km <- gArea(oreganus_hull_proj) / 1e+06
+oreganus_area_in_sq.km # 4,225,174 km^2
+
+aikeni_area_in_sq.km <- gArea(aikeni_hull_proj) / 1e+06
+aikeni_area_in_sq.km # 384,094.9 km^2
+
+realized_potential_overlap_area <- intersection_area_in_sq.km / aikeni_area_in_sq.km # actual intersection area divided by the area of the subspecies with smaller range (actual overlap / potential for overlap)
+realized_potential_overlap_area # 0.08143131
+
+# Convert the polygons to sf objects
+oreganus_sf <- st_as_sf(oreganus_hull_proj)
+aikeni_sf <- st_as_sf(aikeni_hull_proj)
+intersection_sf <- st_as_sf(intersection_proj)
+
+# Create a data frame for polygons and area of overlap
+polygons_df <- rbind(
+  data.frame(geometry = oreganus_sf, Subspecies = "oreganus"),
+  data.frame(geometry = aikeni_sf, Subspecies = "aikeni"),
+  data.frame(geometry = intersection_sf, Subspecies = "overlap")
+)
+
+# Plot the polygons and area of overlap
+ggplot() +
+  geom_sf(data = polygons_df, aes(fill = Subspecies, geometry = geometry), color = "black", alpha = 0.5) +
+  theme_bw()
+
+# Now count how many hybrid and parent sightings are in the area of overlap
+# Convert the sightings data to an sf object with geographic coordinates
+simplified_junco_sightings_sf <- st_as_sf(simplified_junco_sightings, coords = c("Longitude", "Latitude"), crs = geo_proj)
+
+# Transform the sightings data to the UTM coordinate system
+simplified_junco_sightings_utm <- st_transform(simplified_junco_sightings_sf, crs = utm_proj)
+
+# Filter the sightings data for each subspecies and hybrids
+oreganus_data <- simplified_junco_sightings_utm %>%
+  filter(Subspecies == "oreganus")
+
+aikeni_data <- simplified_junco_sightings_utm %>%
+  filter(Subspecies == "aikeni")
+
+# Check if each subspecies' or hybrids' point falls within the intersection polygon
+in_intersection_oreganus <- st_within(oreganus_data, intersection_sf)
+in_intersection_aikeni <- st_within(aikeni_data, intersection_sf)
+
+# Count the number of individuals from each group that fall within the intersection polygon
+oreganus_count <- sum(!sapply(in_intersection_oreganus, is_empty))
+oreganus_count # 3 oreganus sightings in region of overlap
+aikeni_count <- sum(!sapply(in_intersection_aikeni, is_empty))
+aikeni_count # 3 aikeni sightings in region of overlap
+```
+
+```{r}
+# oreganus x dorsalis area overlap calculation + plot
+
+# Specify the target UTM coordinate system zone that best captures the subspecies' ranges
+utm_proj <- "+proj=utm +zone=11 +ellips=WGS84"
+
+# Extract the coordinates for each subspecies
+oreganus_coords <- simplified_junco_sightings %>%
+  filter(Subspecies == "oreganus") %>%
+  select(Longitude, Latitude) %>%
+  mutate(Subspecies = "oreganus")
+
+dorsalis_coords <- simplified_junco_sightings %>%
+  filter(Subspecies == "dorsalis") %>%
+  select(Longitude, Latitude) %>%
+  mutate(Subspecies = "dorsalis")
+
+# Create SpatialPointsDataFrame objects from the subspecies coordinates
+oreganus_spdf <- SpatialPointsDataFrame(oreganus_coords[, c("Longitude", "Latitude")], oreganus_coords)
+dorsalis_spdf <- SpatialPointsDataFrame(dorsalis_coords[, c("Longitude", "Latitude")], dorsalis_coords)
+
+# Define the geographic coordinate system, WGS84
+geo_proj <- CRS("+proj=longlat +datum=WGS84")
+
+# Assign CRS to the subspecies data
+proj4string(oreganus_spdf) <- geo_proj
+proj4string(dorsalis_spdf) <- geo_proj
+
+# Transform the subspecies polygons to the UTM coordinate system
+oreganus_proj <- spTransform(oreganus_spdf, utm_proj)
+dorsalis_proj <- spTransform(dorsalis_spdf, utm_proj)
+
+# Estimate the convex hull polygons for each subspecies in the UTM coordinate system
+oreganus_hull_proj <- gConvexHull(oreganus_proj)
+dorsalis_hull_proj <- gConvexHull(dorsalis_proj)
+
+# Calculate the intersection between the two polygons
+intersection_proj <- gIntersection(oreganus_hull_proj, dorsalis_hull_proj, byid = TRUE)
+
+# Calculate the area of the intersection in square kilometers
+intersection_area_in_sq.km <- gArea(intersection_proj) / 1e+06
+intersection_area_in_sq.km # 15,429.14 km^2
+
+oreganus_area_in_sq.km <- gArea(oreganus_hull_proj) / 1e+06
+oreganus_area_in_sq.km # 4,115,024 km^2
+
+dorsalis_area_in_sq.km <- gArea(dorsalis_hull_proj) / 1e+06
+dorsalis_area_in_sq.km # 290,002 km^2
+
+realized_potential_overlap_area <- intersection_area_in_sq.km / dorsalis_area_in_sq.km # actual intersection area divided by the area of the subspecies with smaller range (actual overlap / potential for overlap)
+realized_potential_overlap_area # 0.05320357
+
+# Convert the polygons to sf objects
+oreganus_sf <- st_as_sf(oreganus_hull_proj)
+dorsalis_sf <- st_as_sf(dorsalis_hull_proj)
+intersection_sf <- st_as_sf(intersection_proj)
+
+# Create a data frame for polygons and area of overlap
+polygons_df <- rbind(
+  data.frame(geometry = oreganus_sf, Subspecies = "oreganus"),
+  data.frame(geometry = dorsalis_sf, Subspecies = "dorsalis"),
+  data.frame(geometry = intersection_sf, Subspecies = "overlap")
+)
+
+# Plot the polygons and area of overlap
+ggplot() +
+  geom_sf(data = polygons_df, aes(fill = Subspecies, geometry = geometry), color = "black", alpha = 0.5) +
+  theme_bw()
+
+# Now count how many hybrid and parent sightings are in the area of overlap
+# Convert the sightings data to an sf object with geographic coordinates
+simplified_junco_sightings_sf <- st_as_sf(simplified_junco_sightings, coords = c("Longitude", "Latitude"), crs = geo_proj)
+
+# Transform the sightings data to the UTM coordinate system
+simplified_junco_sightings_utm <- st_transform(simplified_junco_sightings_sf, crs = utm_proj)
+
+# Filter the sightings data for each subspecies and hybrids
+oreganus_data <- simplified_junco_sightings_utm %>%
+  filter(Subspecies == "oreganus")
+
+dorsalis_data <- simplified_junco_sightings_utm %>%
+  filter(Subspecies == "dorsalis")
+
+# Check if each subspecies' or hybrids' point falls within the intersection polygon
+in_intersection_oreganus <- st_within(oreganus_data, intersection_sf)
+in_intersection_dorsalis <- st_within(dorsalis_data, intersection_sf)
+
+# Count the number of individuals from each group that fall within the intersection polygon
+oreganus_count <- sum(!sapply(in_intersection_oreganus, is_empty))
+oreganus_count # 0 oreganus sightings in region of overlap
+dorsalis_count <- sum(!sapply(in_intersection_dorsalis, is_empty))
+dorsalis_count # 19 dorsalis sightings in region of overlap
+```
+
+```{r}
+# caniceps x aikeni area overlap calculation + plot
+
+# Specify the target UTM coordinate system zone that best captures the subspecies' ranges
+utm_proj <- "+proj=utm +zone=13 +ellips=WGS84"
+
+# Extract the coordinates for each subspecies
+caniceps_coords <- simplified_junco_sightings %>%
+  filter(Subspecies == "caniceps") %>%
+  select(Longitude, Latitude) %>%
+  mutate(Subspecies = "caniceps")
+
+aikeni_coords <- simplified_junco_sightings %>%
+  filter(Subspecies == "aikeni") %>%
+  select(Longitude, Latitude) %>%
+  mutate(Subspecies = "aikeni")
+
+# Create SpatialPointsDataFrame objects from the subspecies coordinates
+caniceps_spdf <- SpatialPointsDataFrame(caniceps_coords[, c("Longitude", "Latitude")], caniceps_coords)
+aikeni_spdf <- SpatialPointsDataFrame(aikeni_coords[, c("Longitude", "Latitude")], aikeni_coords)
+
+# Define the geographic coordinate system, WGS84
+geo_proj <- CRS("+proj=longlat +datum=WGS84")
+
+# Assign CRS to the subspecies data
+proj4string(caniceps_spdf) <- geo_proj
+proj4string(aikeni_spdf) <- geo_proj
+
+# Transform the subspecies polygons to the UTM coordinate system
+caniceps_proj <- spTransform(caniceps_spdf, utm_proj)
+aikeni_proj <- spTransform(aikeni_spdf, utm_proj)
+
+# Estimate the convex hull polygons for each subspecies in the UTM coordinate system
+caniceps_hull_proj <- gConvexHull(caniceps_proj)
+aikeni_hull_proj <- gConvexHull(aikeni_proj)
+
+# Calculate the intersection between the two polygons
+intersection_proj <- gIntersection(caniceps_hull_proj, aikeni_hull_proj, byid = TRUE)
+
+# Calculate the area of the intersection in square kilometers
+intersection_area_in_sq.km <- gArea(intersection_proj) / 1e+06
+intersection_area_in_sq.km # 98,486.54 km^2
+
+caniceps_area_in_sq.km <- gArea(caniceps_hull_proj) / 1e+06
+caniceps_area_in_sq.km # 1,297,161 km^2
+
+aikeni_area_in_sq.km <- gArea(aikeni_hull_proj) / 1e+06
+aikeni_area_in_sq.km # 384,094.9 km^2
+
+realized_potential_overlap_area <- intersection_area_in_sq.km / aikeni_area_in_sq.km # actual intersection area divided by the area of the subspecies with smaller range (actual overlap / potential for overlap)
+realized_potential_overlap_area # 0.256412
+
+# Convert the polygons to sf objects
+caniceps_sf <- st_as_sf(caniceps_hull_proj)
+aikeni_sf <- st_as_sf(aikeni_hull_proj)
+intersection_sf <- st_as_sf(intersection_proj)
+
+# Create a data frame for polygons and area of overlap
+polygons_df <- rbind(
+  data.frame(geometry = caniceps_sf, Subspecies = "caniceps"),
+  data.frame(geometry = aikeni_sf, Subspecies = "aikeni"),
+  data.frame(geometry = intersection_sf, Subspecies = "overlap")
+)
+
+# Plot the polygons and area of overlap
+ggplot() +
+  geom_sf(data = polygons_df, aes(fill = Subspecies, geometry = geometry), color = "black", alpha = 0.5) +
+  theme_bw()
+
+# Now count how many hybrid and parent sightings are in the area of overlap
+# Convert the sightings data to an sf object with geographic coordinates
+simplified_junco_sightings_sf <- st_as_sf(simplified_junco_sightings, coords = c("Longitude", "Latitude"), crs = geo_proj)
+
+# Transform the sightings data to the UTM coordinate system
+simplified_junco_sightings_utm <- st_transform(simplified_junco_sightings_sf, crs = utm_proj)
+
+# Filter the sightings data for each subspecies and hybrids
+aikeni_data <- simplified_junco_sightings_utm %>%
+  filter(Subspecies == "aikeni")
+
+caniceps_data <- simplified_junco_sightings_utm %>%
+  filter(Subspecies == "caniceps")
+
+# Check if each subspecies' or hybrids' point falls within the intersection polygon
+in_intersection_aikeni <- st_within(aikeni_data, intersection_sf)
+in_intersection_caniceps <- st_within(caniceps_data, intersection_sf)
+
+# Count the number of individuals from each group that fall within the intersection polygon
+caniceps_count <- sum(!sapply(in_intersection_caniceps, is_empty))
+caniceps_count # 89 caniceps sightings in region of overlap
+aikeni_count <- sum(!sapply(in_intersection_aikeni, is_empty))
+aikeni_count # 20 aikeni sightings in region of overlap
+```
+
+```{r}
+# dorsalis x aikeni area overlap calculation + plot
+
+# Specify the target UTM coordinate system zone that best captures the subspecies' ranges
+utm_proj <- "+proj=utm +zone=13 +ellips=WGS84"
+
+# Extract the coordinates for each subspecies
+dorsalis_coords <- simplified_junco_sightings %>%
+  filter(Subspecies == "dorsalis") %>%
+  select(Longitude, Latitude) %>%
+  mutate(Subspecies = "dorsalis")
+
+aikeni_coords <- simplified_junco_sightings %>%
+  filter(Subspecies == "aikeni") %>%
+  select(Longitude, Latitude) %>%
+  mutate(Subspecies = "aikeni")
+
+# Create SpatialPointsDataFrame objects from the subspecies coordinates
+dorsalis_spdf <- SpatialPointsDataFrame(dorsalis_coords[, c("Longitude", "Latitude")], dorsalis_coords)
+aikeni_spdf <- SpatialPointsDataFrame(aikeni_coords[, c("Longitude", "Latitude")], aikeni_coords)
+
+# Define the geographic coordinate system, WGS84
+geo_proj <- CRS("+proj=longlat +datum=WGS84")
+
+# Assign CRS to the subspecies data
+proj4string(dorsalis_spdf) <- geo_proj
+proj4string(aikeni_spdf) <- geo_proj
+
+# Transform the subspecies polygons to the UTM coordinate system
+dorsalis_proj <- spTransform(dorsalis_spdf, utm_proj)
+aikeni_proj <- spTransform(aikeni_spdf, utm_proj)
+
+# Estimate the convex hull polygons for each subspecies in the UTM coordinate system
+dorsalis_hull_proj <- gConvexHull(dorsalis_proj)
+aikeni_hull_proj <- gConvexHull(aikeni_proj)
+
+# Calculate the intersection between the two polygons
+intersection_proj <- gIntersection(dorsalis_hull_proj, aikeni_hull_proj, byid = TRUE)
+
+# Calculate the area of the intersection in square kilometers
+intersection_area_in_sq.km <- gArea(intersection_proj) / 1e+06 # <- error because there is no intersection area for this subspecies pair
+
+# Convert the polygons to sf objects
+dorsalis_sf <- st_as_sf(dorsalis_hull_proj)
+aikeni_sf <- st_as_sf(aikeni_hull_proj)
+intersection_sf <- st_as_sf(intersection_proj) # <- error because there is no intersection area for this subspecies pair
+
+# Create a data frame for polygons and area of overlap
+polygons_df <- rbind(
+  data.frame(geometry = dorsalis_sf, Subspecies = "dorsalis"),
+  data.frame(geometry = aikeni_sf, Subspecies = "aikeni")
+)
+
+# Plot the polygons and area of overlap
+ggplot() +
+  geom_sf(data = polygons_df, aes(fill = Subspecies, geometry = geometry), color = "black", alpha = 0.5) +
+  theme_bw()
+
+# No area of overlap so will not count individuals of each subspecies
+```
+
+```{r}
+# dorsalis x mearnsi area overlap calculation + plot
+
+# Specify the target UTM coordinate system zone that best captures the subspecies' ranges
+utm_proj <- "+proj=utm +zone=12 +ellips=WGS84"
+
+# Extract the coordinates for each subspecies
+dorsalis_coords <- simplified_junco_sightings %>%
+  filter(Subspecies == "dorsalis") %>%
+  select(Longitude, Latitude) %>%
+  mutate(Subspecies = "dorsalis")
+
+mearnsi_coords <- simplified_junco_sightings %>%
+  filter(Subspecies == "mearnsi") %>%
+  select(Longitude, Latitude) %>%
+  mutate(Subspecies = "mearnsi")
+
+# Create SpatialPointsDataFrame objects from the subspecies coordinates
+dorsalis_spdf <- SpatialPointsDataFrame(dorsalis_coords[, c("Longitude", "Latitude")], dorsalis_coords)
+mearnsi_spdf <- SpatialPointsDataFrame(mearnsi_coords[, c("Longitude", "Latitude")], mearnsi_coords)
+
+# Define the geographic coordinate system, WGS84
+geo_proj <- CRS("+proj=longlat +datum=WGS84")
+
+# Assign CRS to the subspecies data
+proj4string(dorsalis_spdf) <- geo_proj
+proj4string(mearnsi_spdf) <- geo_proj
+
+# Transform the subspecies polygons to the UTM coordinate system
+dorsalis_proj <- spTransform(dorsalis_spdf, utm_proj)
+mearnsi_proj <- spTransform(mearnsi_spdf, utm_proj)
+
+# Estimate the convex hull polygons for each subspecies in the UTM coordinate system
+dorsalis_hull_proj <- gConvexHull(dorsalis_proj)
+mearnsi_hull_proj <- gConvexHull(mearnsi_proj)
+
+# Calculate the intersection between the two polygons
+intersection_proj <- gIntersection(dorsalis_hull_proj, mearnsi_hull_proj, byid = TRUE)
+
+# Calculate the area of the intersection in square kilometers
+intersection_area_in_sq.km <- gArea(intersection_proj) / 1e+06 # <- error because there is no intersection area for this subspecies pair
+
+# Convert the polygons to sf objects
+dorsalis_sf <- st_as_sf(dorsalis_hull_proj)
+mearnsi_sf <- st_as_sf(mearnsi_hull_proj)
+intersection_sf <- st_as_sf(intersection_proj) # <- error because there is no intersection area for this subspecies pair
+
+# Create a data frame for polygons and area of overlap
+polygons_df <- rbind(
+  data.frame(geometry = dorsalis_sf, Subspecies = "dorsalis"),
+  data.frame(geometry = mearnsi_sf, Subspecies = "mearnsi")
+)
+
+# Plot the polygons and area of overlap
+ggplot() +
+  geom_sf(data = polygons_df, aes(fill = Subspecies, geometry = geometry), color = "black", alpha = 0.5) +
+  theme_bw()
+
+# No area of overlap so will not count individuals of each subspecies
+```

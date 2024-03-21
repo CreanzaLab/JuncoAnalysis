@@ -1,0 +1,132 @@
+---
+title: "Junco Song UMAP and t-SNE"
+author: "Sarah Hourihan"
+date: "2024-02-06"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## UMAP = Uniform Manifold Approximation
+Algorithm for dimensional reduction
+
+```{r}
+# Install and load packages for UMAP and visualization
+library(umap)
+library(ggplot2)
+```
+
+```{r}
+# Load dark-eyed junco song feature data
+JuncoCSV <- read.csv("/Users/sarahhourihan/Library/CloudStorage/Box-Box/Creanza Lab/Sarah_Nicole/files_for_manuscript/PUBLISH_JuncoSongData_Subspecies_and_ID.csv")
+
+JuncoSongData <- subset(JuncoCSV, select = -c(ID_Num, subspecies)) # Remove ID_Num and subspecies columns, leaving only the song-feature data
+```
+
+```{r}
+# Run UMAP, convert to data frame, and visualize results
+junco.umap <- umap(JuncoSongData)
+junco.umap <- as.data.frame(junco.umap$layout)
+plotting_colors <- c("hyemalis" = "palevioletred1", "oreganus" = "royalblue", "aikeni" = "green4", "caniceps" = "gold", "dorsalis" = "darkorchid4", "mearnsi" = "firebrick3")
+ggplot(junco.umap, aes(V1, V2, color=JuncoCSV$subspecies)) + 
+  geom_point(size=3, alpha = 0.7) +
+  scale_color_manual(values = plotting_colors) +
+  labs(x = "Dimension 1", y = "Dimension 2") +
+  theme_bw() +
+  theme(axis.title = element_text(size = 16),
+        axis.text = element_text(size = 16),
+        legend.text = element_text(size = 16))
+
+# Testing n_neighbors tuning parameter - did not help cluster the points by subspecies
+junco.umap.testneighbors15 <- umap(JuncoSongData, n_neighbors = 15)
+junco.umap.testneighbors15 <- as.data.frame(junco.umap.testneighbors15$layout)
+ggplot(junco.umap.testneighbors15, aes(V1, V2, color=JuncoCSV$subspecies)) + 
+  geom_point(size=3, alpha = 0.7) +
+  scale_color_manual(values = plotting_colors) +
+  labs(x = "Dimension 1", y = "Dimension 2", title = "UMAP n_neighbors 15") +
+  theme_bw() +
+  theme(axis.title = element_text(size = 16),
+        axis.text = element_text(size = 16),
+        legend.text = element_text(size = 16))
+        
+junco.umap.testneighbors30 <- umap(JuncoSongData, n_neighbors = 30)
+junco.umap.testneighbors30 <- as.data.frame(junco.umap.testneighbors30$layout)
+ggplot(junco.umap.testneighbors30, aes(V1, V2, color=JuncoCSV$subspecies)) + 
+  geom_point(size=3, alpha = 0.7) +
+  scale_color_manual(values = plotting_colors) +
+  labs(x = "Dimension 1", y = "Dimension 2", title = "UMAP n_neighbors 30") +
+  theme_bw() +
+  theme(axis.title = element_text(size = 16),
+        axis.text = element_text(size = 16),
+        legend.text = element_text(size = 16))
+
+junco.umap.testneighbors50 <- umap(JuncoSongData, n_neighbors = 50)
+junco.umap.testneighbors50 <- as.data.frame(junco.umap.testneighbors50$layout)
+ggplot(junco.umap.testneighbors50, aes(V1, V2, color=JuncoCSV$subspecies)) + 
+  geom_point(size=3, alpha = 0.7) +
+  scale_color_manual(values = plotting_colors) +
+  labs(x = "Dimension 1", y = "Dimension 2", title = "UMAP n_neighbors 50") +
+  theme_bw() +
+  theme(axis.title = element_text(size = 16),
+        axis.text = element_text(size = 16),
+        legend.text = element_text(size = 16))
+
+# Testing min_dist tuning parameter - did not help cluster the points by subspecies, only affected the distance between the points
+junco.umap.testmin0.1 <- umap(JuncoSongData, min_dist = 0.1)
+junco.umap.testmin0.1 <- as.data.frame(junco.umap.testmin0.1$layout)
+ggplot(junco.umap.testmin0.1, aes(V1, V2, color=JuncoCSV$subspecies)) + 
+  geom_point(size=3, alpha = 0.7) +
+  scale_color_manual(values = plotting_colors) +
+  labs(x = "Dimension 1", y = "Dimension 2", title = "UMAP min_dist 0.1") +
+  theme_bw() +
+  theme(axis.title = element_text(size = 16),
+        axis.text = element_text(size = 16),
+        legend.text = element_text(size = 16))
+
+junco.umap.testmin0.5 <- umap(JuncoSongData, min_dist = 0.5)
+junco.umap.testmin0.5 <- as.data.frame(junco.umap.testmin0.5$layout)
+ggplot(junco.umap.testmin0.5, aes(V1, V2, color=JuncoCSV$subspecies)) + 
+  geom_point(size=3, alpha = 0.7) +
+  scale_color_manual(values = plotting_colors) +
+  labs(x = "Dimension 1", y = "Dimension 2", title = "UMAP min_dist 0.5") +
+  theme_bw() +
+  theme(axis.title = element_text(size = 16),
+        axis.text = element_text(size = 16),
+        legend.text = element_text(size = 16))
+
+junco.umap.testmin0.9 <- umap(JuncoSongData, min_dist = 0.9)
+junco.umap.testmin0.9 <- as.data.frame(junco.umap.testmin0.9$layout)
+ggplot(junco.umap.testmin0.9, aes(V1, V2, color=JuncoCSV$subspecies)) + 
+  geom_point(size=3, alpha = 0.7) +
+  scale_color_manual(values = plotting_colors) +
+  labs(x = "Dimension 1", y = "Dimension 2", title = "UMAP min_dist 0.9") +
+  theme_bw() +
+  theme(axis.title = element_text(size = 16),
+        axis.text = element_text(size = 16),
+        legend.text = element_text(size = 16))
+```
+
+
+## t-SNE = t-distributed Stochastic Neighbor Embedding
+Unsupervised non-linear dimensionality reduction technique for data exploration and visualizing high-dimensional data
+
+```{r}
+# Load package for t-SNE
+library(tsne)
+
+# Run t-SNE, convert to data frame, and visualize results
+set.seed(123)
+junco.tsne <- tsne(JuncoSongData, initial_dims = 2)
+junco.tsne <- data.frame(junco.tsne)
+
+ggplot(junco.tsne, aes(X1, X2, colour=JuncoCSV$subspecies)) + 
+  geom_point(size=3, alpha = 0.7) +
+  scale_color_manual(values = plotting_colors) +
+  labs(x = "Dimension 1", y = "Dimension 2") +
+  theme_bw() +
+  theme(axis.title = element_text(size = 16),
+        axis.text = element_text(size = 16),
+        legend.text = element_text(size = 16))
+```
